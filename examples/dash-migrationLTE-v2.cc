@@ -817,6 +817,95 @@ choiceServer (Ptr<Node> client,NodeContainer ues,TcpStreamClientHelper clientHel
 }
 
 void
+storage (Ptr<Node> client,NodeContainer ues,TcpStreamClientHelper clientHelper, TcpStreamServerHelper serverHelper, NodeContainer macroCells,NodeContainer sv)
+{
+  std::vector <double> sizes {90,146.25,225,337.5,506.25,765,1057.5,1350};
+  NodeContainer smallCells;
+  for (uint i = 1; i < macroCells.GetN(); i++)
+  {
+    smallCells.Add(macroCells.Get(i));
+  }
+  int value = uniformDis();
+  double tam = sizes.at(value);
+  std::vector <uint> devices = searchArea(client ,ues);
+  if (devices.size()>0)
+  {
+    double bestQx=0;
+    Ptr<Node> bestue=NULL;
+    for (uint i = 0; i < devices.size(); i++)
+    {
+      Ptr<Node>ue = ues.Get(devices[i]);
+      double Cap = clientHelper.GetStorage(ue);
+      if (Cap>tam)
+      {
+        if (Cap>bestQx)
+        {
+          bestQx=Cap;
+          bestue=ue;
+        }
+      }
+    }
+    if (bestue!=NULL)
+    {NS_LOG_UNCOND("D2D");
+      clientHelper.SetStorage(bestue,bestQx-tam);
+      ServerHandover(clientHelper,client,d2dAddress);
+      return ;
+    }
+  }
+  std::vector <uint> smalls = searchArea(client ,smallCells);
+  if (smalls.size()>0)
+  {
+    double bestQy=0;
+    Ptr<Node> bestsmall=NULL;
+    for (uint i = 0; i < smalls.size(); i++)
+    {
+      Ptr<Node>cell = smallCells.Get(smalls[i]);
+      double Cap = serverHelper.GetStorage(sv.Get(1));
+      if (Cap>tam)
+      {
+        if (Cap>bestQy)
+        {
+          bestQy=Cap;
+          bestsmall=cell;
+        }
+      }
+    }
+    if (bestsmall!=NULL)
+    { NS_LOG_UNCOND("Small Cell");
+      serverHelper.SetStorage(sv.Get(1),bestQy-tam);
+      ServerHandover(clientHelper,client,SmallCellAddress);
+      return;
+    }
+  }
+  std::vector <uint> macros = searchArea(client ,macroCells);
+  if (macros.size()>0)
+  {
+    double bestQz=0;
+    Ptr<Node> bestmacro=NULL;
+    for (uint i = 0; i < macros.size(); i++)
+    {
+      Ptr<Node>cell = macroCells.Get(macros[i]);
+      double Cap = serverHelper.GetStorage(sv.Get(2));
+      if (Cap>tam)
+      {
+        if (Cap>bestQz)
+        {
+          bestQz=Cap;
+          bestmacro=cell;
+        }
+      }
+    }
+    if (bestmacro!=NULL)
+    {NS_LOG_UNCOND("Macro Cell");
+      serverHelper.SetStorage(sv.Get(2),bestQz-tam);
+      ServerHandover(clientHelper,client,MacroCellAddress);
+      return;
+    }
+  }
+  NS_LOG_UNCOND("Cloud");
+}
+
+void
 greedy (Ptr<Node> client,NodeContainer ues,TcpStreamClientHelper clientHelper, TcpStreamServerHelper serverHelper, NodeContainer macroCells,NodeContainer sv)
 {
   std::vector <double> sizes {90,146.25,225,337.5,506.25,765,1057.5,1350};
@@ -1134,7 +1223,7 @@ main (int argc, char *argv[])
   PointToPointHelper p2ph;
   p2ph.SetDeviceAttribute ("DataRate", DataRateValue (DataRate ("1000Mb/s")));
   p2ph.SetDeviceAttribute ("Mtu", UintegerValue (1500));
-  p2ph.SetChannelAttribute ("Delay", TimeValue(MilliSeconds(2)));
+  p2ph.SetChannelAttribute ("Delay", TimeValue(MilliSeconds(5)));
 
   //Install link between PGW and Router
   NetDeviceContainer pgwRouterDevices = p2ph.Install (pgw, router);
@@ -1146,7 +1235,7 @@ main (int argc, char *argv[])
       if (u==1)
       {
         p2ph.SetDeviceAttribute ("DataRate", DataRateValue (DataRate ("1000Mb/s")));
-        p2ph.SetChannelAttribute("Delay", TimeValue(MilliSeconds(20)));
+        p2ph.SetChannelAttribute("Delay", TimeValue(MilliSeconds(40)));
       }
       if (u==2)
       {
@@ -1612,7 +1701,7 @@ EnbNodes.Create (numberOfEnbNodes);
       {
         double startTime = 2.0;
         clientApps.Get (i)->SetStartTime (Seconds (startTime));
-        Simulator::Schedule(Seconds(startTime),&choiceServer,UeNodes.Get(i), UeNodes,clientHelper,serverHelper,EnbNodes,remoteHosts);
+        Simulator::Schedule(Seconds(startTime),&storage,UeNodes.Get(i), UeNodes,clientHelper,serverHelper,EnbNodes,remoteHosts);
       }
     }
     else
@@ -1624,7 +1713,20 @@ EnbNodes.Create (numberOfEnbNodes);
           double startTime = 2.0;
           clientApps.Get (i)->SetStartTime (Seconds (startTime));
           int value = rand();
-          Simulator::Schedule(Seconds(startTime),&ServerHandover,clientHelper,UeNodes.Get(i),svAddress[value]);
+          Simulator::Schedule(Seconds(startTime),&greedy,UeNodes.Get(i), UeNodes,clientHelper,serverHelper,EnbNodes,remoteHosts);
+        }
+      }
+      else
+      {
+        if (pol==3)
+        {
+          for (uint i = 0; i < clientApps.GetN (); i++)
+          {
+            double startTime = 2.0;
+            clientApps.Get (i)->SetStartTime (Seconds (startTime));
+            int value = rand();
+            Simulator::Schedule(Seconds(startTime),&aleatorio,UeNodes.Get(i), UeNodes,clientHelper,serverHelper,EnbNodes,remoteHosts);
+          }
         }
       }
     }
