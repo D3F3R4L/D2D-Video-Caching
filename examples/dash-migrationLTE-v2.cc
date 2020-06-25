@@ -1137,7 +1137,7 @@ main (int argc, char *argv[])
   std::string segmentSizeFilePath = "src/esba-dash-energy/dash/segmentSizesBigBuck90.txt";
   //bool shortGuardInterval = true;
   int seedValue = 0;
-  uint16_t pol=1;
+  uint16_t pol=3;
 
   //lastRx=[numberOfUeNodes];
   //LogComponentEnable("dash-migrationExample", LOG_LEVEL_ALL);

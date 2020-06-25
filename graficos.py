@@ -1,28 +1,30 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
+import matplotlib.patches as mpatches
 import os
 import glob
 import operator
 import argparse
 import pandas as pd
+plt.style.use('seaborn-dark-palette')
 
 parser = argparse.ArgumentParser(description='Script to make graphs for dash migration simulation')
-parser.add_argument('--segmentfile','-seg',default="segmentSizesBigBuck.txt", type=str,help='Name of segmentfile used.Default is segmentSizesBigBuck1A.txt')
+#parser.add_argument('--segmentfile','-seg',default="segmentSizesBigBuck.txt", type=str,help='Name of segmentfile used.Default is segmentSizesBigBuck1A.txt')
 parser.add_argument('--adaptAlgo','-Adpt',default="festive", type=str,help='Name of adaptation algorithm used.Default is festive, possible values are: festive, panda, tobasco')
-parser.add_argument('--Clients','-c', type=int,help='Number of Clients in the simulation')
+parser.add_argument('--Clients','-c', type=str,help='Number of Clients in the simulation')
 #parser.add_argument('--Politica','-p', type=int,help='Politica used in the simulation')
 parser.add_argument('--runs','-r', type=int,default=1,help='Number of simulations to make the graphs. Default is 1')
 args = parser.parse_args()
-if args.adaptAlgo!="festive" and args.adaptAlgo!="panda" and args.adaptAlgo!="tobasco":
+if args.adaptAlgo!="festive" and args.adaptAlgo!="panda" and args.adaptAlgo!="tobasco" and args.adaptAlgo!="esba":
     parser.error("Wrong adaptation algorithm")
 if args.runs <= 0 :
     parser.error("Invalid number of runs")
 
 runs=args.runs
-segmentfile=args.segmentfile
+#segmentfile=args.segmentfile
 adaptAlgo=args.adaptAlgo
-numberOfClients=args.Clients
+numberOfClients=args.Clients.split(',')
 #politica=args.Politica
 MeansTotals=[]
 MeansBW=[]
@@ -40,132 +42,391 @@ bitSwitchUptotalsConfInt=[]
 bitSwitchDowntotalsConfInt=[]
 ClientsTotals=[]
 QualityMeanTotal=[]
+comp=['Proposal','Storage-Based','Greedy','Random']
+fair=[]
+Cost=[]
+costConf=[]
+playback=[]
+migrationConf=[]
+migration=[]
+buffering=[]
+bufferingConf=[]
+numberTotal=[]
+numberTotalConf=[]
+Stalls=[]
+StallsConf=[]
+Rebuffer=[]
+RebufferConf=[]
+patterns = [ "/","x", "|" , "-" , "+", "\\" , "o", "O", ".", "*" ]
+#colors=['dimgray', 'gray', 'darkgray','silver','lightgrey']
+colors=['black','red','blue', 'blueviolet','green','lightsteelblue','limegreen']
+markers=['o','s','P','v','*','X','D']
 
 def main():
   print('Beginning')
-  segfile='src/dash-migration/dash/{seg}'.format(seg=segmentfile)
-  file = open(segfile,"r")
-  collums= file.readline().split(" ")
-  numSegments=len(collums)-1
+  numSegments=900
   #os.chdir('..')
-  folder='dash-log-files/{algo}/{num}'.format(algo=adaptAlgo,num=numberOfClients)
-  folders=os.listdir(folder)
+
+  folder='dash-log-files/{algo}/'.format(algo=adaptAlgo)
   os.chdir(folder)
-  folders.sort(key=operator.itemgetter(0))
-  aux=[]
-  for i in folders:
-    if i.isdigit():
-      aux.append(i)
-  folders=aux
-  #print(folders)
-  for i in folders:
-    #folder='dash-log-files/{algo}/{num}/{pol}'.format(algo=adaptAlgo,num=numberOfClients,pol=i)
-    print('------Politica ',i,'------')
-    os.chdir(i)
-    #bufferUnderrunGraphs()
-    #throughputGraphs(numSegments)
-    qualityGraphs(numSegments)
-    throughtputServer()
-    StallsGraphs()
-    RebufferGraphs()
+  for k in numberOfClients:
+    startTime=[]
+    startTimeConf=[]
+    totalCost=[]
+    totalCostConf=[]
+    totalUsage=[]
+    StRd=[]
+    StRdConf=[]
+    fogNumber=[]
+    fogNumberConf=[]
+    Clients=k
+    folder='{num}'.format(num=Clients)
+    folders=os.listdir(folder)
+    os.chdir(folder)
+    folders.sort(key=operator.itemgetter(0))
+    aux=[]
+    for i in folders:
+      if i.isdigit():
+        aux.append(i)
+    folders=aux
+    #print(folders)
+    for i in folders:
+      #folder='dash-log-files/{algo}/{num}/{pol}'.format(algo=adaptAlgo,num=numberOfClients,pol=i)
+      print('------Politica ',i,'------')
+      os.chdir(i)
+      vec, conf=playbackStart()
+      startTime.append(vec)
+      startTimeConf.append(conf)
+      srd,srdConf=StallsRebuffers(k)
+      StRd.append(srd)
+      StRdConf.append(srdConf)
+      #resp,conf2,num,numConf=fogStatus()
+      #totalCost.append(np.sum(resp[0]))
+      #totalCostConf.append(conf2)
+      #totalUsage.append(resp[1])
+      #fogNumber.append(num)
+      #fogNumberConf.append(numConf)
+      os.chdir('..')
+    #graphtotals(numSegments)
+    barGraph(totalCost ,name='cost.png', ylabel='Total Monetary Cost (USD)',xticks=comp)
+    stackedBarGraph(startTime,'start.png',ylabel='playback Start Time (s)',xticks=comp,labels=['Tempo de Migração', 'Tempo de bufferização'])
+    barGraph(totalUsage, name='usage.png',xlabel='time(s)')
+    barGraph(StRd, name='Stalls.png',xlabel='Stalls')
+    playback.append(startTime)
+    migrationConf.append([item[0] for item in startTimeConf])
+    bufferingConf.append([item[1] for item in startTimeConf])
+    migration.append([item[0] for item in startTime])
+    buffering.append([item[1] for item in startTime])
+    StallsConf.append([item[0] for item in StRdConf])
+    RebufferConf.append([item[1] for item in StRdConf])
+    Stalls.append([item[0] for item in StRd])
+    Rebuffer.append([item[1] for item in StRd])
+    #Cost.append(totalCost)
+    #costConf.append(totalCostConf)
+    #fair.append(totalUsage)
+    #fogNumber.pop()
+    #fogNumberConf.pop()
+    #numberTotal.append(fogNumber)
+    #numberTotalConf.append(fogNumberConf)
     os.chdir('..')
-  graphtotals(numSegments)
+    #print(os.getcwd())
+    #print(os.listdir())
+  print('custo',costConf)
+  barGraph(Cost,costConf,name='cost.pdf',xlabel='Number of Microservices',ylabel='Cost per hour(USD)',xticks=numberOfClients,labels=comp)
+  print(playback)
+  barGraph(migration,migrationConf,'migration.pdf','Number of Microservices','Migration Time (s)',xticks=numberOfClients,labels=comp)
+  barGraph(buffering,bufferingConf,'buffering.pdf','Number of Microservices','buffering Time (s)',xticks=numberOfClients,labels=comp)
+  barGraph(Stalls,StallsConf,'Stalls.pdf','Number of Microservices','Number of Stalls',xticks=numberOfClients,labels=comp)
+  barGraph(Rebuffer,RebufferConf,'Rebuffers.pdf','Number of Microservices','Rebuffer time (s)',xticks=numberOfClients,labels=comp)
+  stackedBarGraph(playback,'start.pdf','Number of Microservices','Playback Start Time (s)',xticks=numberOfClients,labels=['PLI','Fog4VR','Greedy','Random','Cloud','Migration Time', 'buffering Time'])
+  #plotGraph(fair, 'usage.pdf','Number of Microservices','Load Distribution (Jain Fairness)',xticks=numberOfClients,labels=comp)
+  #barGraph(numberTotal,numberTotalConf,'number.pdf','Number of Microservices','Microservices on fogs',xticks=numberOfClients,labels=comp)#,'Nuvem'])
+  #print(fair)
+  #print(numberTotal)
   print('Finished')
-  #print(os.getcwd())
-  #print(os.listdir())
 
-###################
-# Buffer Underrun 
-###################
-def bufferUnderrunGraphs():
-  files= '*sim{simu}_*bufferUnderrunLog*'.format(simu=simulation)
-  bufferUnderrunFiles = glob.glob(files)
-  #print(bufferUnderrunFiles)
-  S1timeTotal=[]
-  S2timeTotal=[]
-  S3timeTotal=[]
-  j=0
-  while(j<len(bufferUnderrunFiles)):
-    #print(j)
-    name = bufferUnderrunFiles[j]
-    file = open(name,"r")
-    next(file)
-    Buffer_Underrun_Total_Time=[]
-    for line in file:
-      fields = line.split(";")
-      #print(fields)
-      if(j!=0):
-        timeTotal.append(float(fields[3])+timeTotal[len(timeTotal)-1])
-      else:
-        timeTotal.append(float(fields[3]))
-    if j==0 and len(timeTotal)==0 :
-      timeTotal.append(0)
-    file.close()
-    j+=1
-  
-  plt.plot(totalUnderruns,timeTotal , label='linear')
-  plt.xlabel('Buffer Underrun')
-  plt.ylabel('Total Time')
-  plt.title("Buffer Underrun Total Duration Time")
-  save = 'BufferUnderrunTotalTime.pdf'
-  plt.savefig(save)
+def playbackStart():
+  i=0
+  migrationTimeMean=[]
+  bufferingTimeMean=[]
+  while i<runs:
+    j=0
+    simulation=i
+    files= '*sim{simu}_*downloadLog*'.format(simu=simulation)
+    files=glob.glob(files)
+    migrationTime=[]
+    bufferingTime=[]
+    while j<len(files):
+      name=files[j]
+      file = open(name,"r")
+      next(file)
+      line=file.readline()
+      fields=line.split(";")
+      if (len(fields)>=2):
+        end=float(fields[3])
+        mid=float(fields[2])
+        begin=float(fields[1])
+        migrationTime.append(mid-begin)
+        bufferingTime.append(end-mid)
+      j+=1
+    migrationTimeMean.append(np.mean(migrationTime))
+    bufferingTimeMean.append(np.mean(bufferingTime))
+    i+=1
+  vec=[]
+  conf=[]
+  vec.append(np.mean(migrationTimeMean))
+  conf.append(np.std(migrationTimeMean))
+  vec.append(np.mean(bufferingTimeMean))
+  conf.append(np.std(bufferingTimeMean))
+  stackedBarGraph(vec,'play.pdf')
+  return vec,conf
+
+def StallsRebuffers(num):
+  i=0
+  StMean=[]
+  RdMean=[]
+  while i<runs:
+    j=0
+    simulation=i
+    files= '*sim{simu}_*bufferUnderrunLog*'.format(simu=simulation)
+    files=glob.glob(files)
+    St=[]
+    Rd=[]
+    while j<len(files):
+      name=files[j]
+      file=pd.read_csv(name, sep=';',index_col=False)
+      duration=np.array(file['Buffer_Underrun_Duration'])
+      St.append(len(duration))
+      Rd.append(np.sum(duration))  
+      j+=1
+    StMean.append(np.mean(St))
+    RdMean.append(np.nanmean(Rd))
+    i+=1
+  vec=[]
+  Conf=[]
+  print(np.mean(StMean))
+  print(np.mean(RdMean))
+  vec.append(np.mean(StMean))
+  Conf.append(np.std(StMean))
+  vec.append(np.mean(RdMean))
+  Conf.append(np.std(RdMean))
+  #stackedBarGraph(vec,'strd.pdf')
+  return vec,Conf
+
+def fogStatus():
+  i=0
+  priceMean=[]
+  usageMean=[]
+  numberSum=[]
+  while i<runs:
+    j=0
+    simulation=i
+    files= '*throughputServer*sim{simu}_*'.format(simu=simulation)
+    files=glob.glob(files)
+    files.sort()
+    price=[]
+    usage=[]
+    number=[]
+    while j<len(files):
+      use=[]
+      name=files[j]
+      file=pd.read_csv(name, sep=';',index_col=False)
+      onOff=np.array(file['OnOff'])
+      cost=np.array(file['Cost'])
+      content=np.array(file['AllocatedContent']).astype(str)
+      cost=onOff*cost
+      #if (j<=1 or j==5 or j==9):
+      #  onOff=onOff*0.000085
+      #elif ((j<=8 and j>=6) or j==2 or j==4):
+      #  onOff=onOff*0.00017
+      #else:
+      #  onOff=onOff*0.00034
+      if(name!='throughputServer_sim{simu}_2.0.14.1_Log.csv'.format(simu=simulation)):
+        val=content[60].split("/")
+        #val=list(set(val))
+        val = [x for x in val if str(x) != 'nan']
+        number.append(len(val))
+      price.append(np.sum(cost))
+      freeMemory=np.array(file['FreeMemory'])
+      totalMemory=np.array(file['TotalMemory'])
+      per=np.divide(totalMemory,freeMemory)
+      per=1-per
+      #per=per*100
+      usage.append(np.mean(per))
+      #for i in range (0,len(freeMemory)):
+      #  per=freeMemory[i]/totalMemory[i]
+      #  diff= 1-per
+      #  use.append(diff*100)
+      #content=np.array(file['AllocatedContent'])
+      #address=np.array(file['ServerAddress'])
+      #ip=address[0]
+      j+=1
+    fair= pow(np.sum(usage),2)/(len(usage)*(np.sum(np.power(usage,2))))
+    usageMean.append(fair)
+    priceMean.append(30*np.sum(price))
+    numberSum.append(np.sum(number))
+    i+=1
+  vec=[]
+  conf=[]
+  num=[]
+  numConf=[]
+  num.append(np.nanmean(numberSum))
+  numConf.append(np.std(numberSum))
+  vec.append(np.mean(priceMean))
+  conf.append(np.std(priceMean))
+  #barGraph(vec,'cost.pdf')
+  vec.append(np.mean(usageMean))
+  #barGraph([vec[1]],'usage.pdf')
+  return vec,conf,num,numConf
+
+
+def barGraph(vec,conf=[],name='',xlabel='',ylabel='',xticks=[],title='',labels=[]):
+  vec=np.asarray(vec)
+  conf=np.asarray(conf)
+  shapes=vec.shape
+  if conf.shape!=shapes:
+    conf=np.zeros(shapes)
+  else:
+    conf=((1.96*conf)/np.sqrt(33))
+  tam=shapes[0]
+
+  if len(shapes)>1:
+    tam2=shapes[1]
+  else:
+    tam2=0
+  fig,ax =plt.subplots()
+  ind = np.arange(0.0,tam/2,0.5).astype(float)
+  if len(xticks)<1: 
+    xticks=ind
+  width = 0.1
+  legend=[]
+  #p1,=plt.plot(x,cost[0],color='b',ls='--',lw=1, label='Fog4Video')
+  #p2,=plt.plot(x,cost[1],color='orange',ls='-.',lw=1, label='Greedy')
+  #p3,=plt.plot(x,cost[2],color='green',ls=':',lw=1, label='Random')
+  if tam2==0:
+    for i in range (0, int(tam)):
+      ax.bar(ind[i], vec[i], width,yerr=conf[i],color='grey',ecolor='black', hatch=patterns[i])
+  else:
+    for i in range (0, int(tam)):
+      for j in range (0, int(tam2)):
+        ax.bar(ind[i]+(j*width), vec[i][j], width,yerr=conf[i][j], color=colors[j],ecolor='black', hatch=patterns[j])
+        if (i==0 and len(labels)==tam2):
+            legend.append(mpatches.Patch(facecolor=colors[j],hatch=patterns[j],label=labels[j]))
+  if tam2==0:
+    ax.set_xticks(ind)
+  else:
+    ax.set_xticks(ind+((tam2-1)*width)/2)
+  ax.set_xticklabels(xticks,fontsize=18)
+  plt.xlabel(xlabel,fontsize=18)
+  plt.ylabel(ylabel,fontsize=18)
+  plt.xticks(fontsize=16)
+  plt.yticks(fontsize=16)
+  #plt.xlim((1,300))
+  plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc='lower left',
+           ncol=4, mode="expand", borderaxespad=0.,fontsize='medium',title=title,handles=legend,fancybox=True, shadow=True)
+  plt.grid(True,alpha=0.4,axis='y',linestyle='--')
+  plt.savefig(name,figsize=(4000,4000),bbox_inches="tight",dpi=300)
   plt.close()
 
-  S1Quality=np.zeros(numSegments)
-  S2Quality=np.zeros(numSegments)
-  S3Quality=np.zeros(numSegments)
-  S1Clients=np.zeros(numSegments)
-  S2Clients=np.zeros(numSegments)
-  S3Clients=np.zeros(numSegments)
-  j=0
-  while(j<len(playbackFiles)):
-    name = playbackFiles[j]
-    file = open(name,"r")
-    next(file)
-    segment=[]
-    qualityLevel=[]
-    Server=[]
-    for line in file:
-      fields = line.split(";")
-      segment.append(float(fields[0]))
-      qualityLevel.append(float(fields[2]))
-      Server.append(str(fields[3]))
-    file.close()
-
-    i=0
-    for x1, x2, y1,y2 in zip(segment, segment[1:], qualityLevel, qualityLevel[1:]):
-      if str(Server[i])=="1.0.0.1":
-        S1Quality[i]=S1Quality[i]+y1
-        S1Clients[i]=S1Clients[i]+1
-      elif str(Server[i])=='2.0.0.1' :
-        S2Quality[i]=S2Quality[i]+y1
-        S2Clients[i]=S2Clients[i]+1
-      else:
-        S3Quality[i]=S3Quality[i]+y1
-        S3Clients[i]=S3Clients[i]+1
-      i+=1
-    j+=1
-
-'''
-  Buffer_Underrun_Started_At.insert(0,0.0)
-  Buffer_Underrun_Total_Time.insert(0,0.0)
-  y1 = np.arange(len(Buffer_Underrun_Started_At))
-  plt.step(Buffer_Underrun_Started_At, y1, where= 'post',label='')
-  plt.plot(Buffer_Underrun_Started_At, y1, 'C0o', alpha=0.5)
-  plt.xlabel('Segundos')
-  plt.ylabel('Estouros')
-  plt.title("Numero de estouros de buffer")
-  save = 'sim{simu}_cl{iter}_NumbersOfBufferUnderrun.pdf'.format(simu=simulation, iter=j)
-  plt.savefig(save)
+def stackedBarGraph(vec,name,xlabel='',ylabel='',xticks=[],title='',labels=[]):
+  patterns = [ "/","*","x", "|" , "-" , "+", "\\" , "o", "O", "."]
+  vec=np.asarray(vec)
+  shapes=vec.shape
+  tam=shapes[0]/2
+  legend=[]
+  if len(shapes)==2:
+    tam2=shapes[1]/2
+    tam3=0
+  elif len(shapes)==3:
+    tam2=shapes[1]
+    tam3=shapes[2]/2
+  else:
+    tam2=0
+    tam3=0
+  fig,ax =plt.subplots()
+  ind = np.arange(0.0,tam,0.5).astype(float)
+  if len(xticks)<1: 
+    xticks=ind
+  width = 0.1
+  if tam2==0:
+    for i in range (0, int(tam)):
+      ax.bar(ind[i], vec[i], width, color='grey',ecolor='black', hatch=patterns[i])
+      ax.bar(ind[i], vec[i+1], width,bottom = vec[i], color='grey',ecolor='black', hatch=patterns[i+1])
+  elif tam2==shapes[1]/2:
+    for i in range (0, int(tam*2)):
+      for j in range(0,int(tam2)):
+        ax.bar(ind[i], vec[i][j], width, color='grey',ecolor='black', hatch=patterns[j])
+        ax.bar(ind[i], vec[i][j+1], width,bottom = vec[i][j], color='grey',ecolor='black', hatch=patterns[j+1])
+    if len(labels)/2==tam2:
+      for j in range(0,int(tam2*2)): 
+        legend.append(mpatches.Patch(facecolor='grey',hatch=patterns[j], label=labels[j]))
+  else:
+    for i in range (0, int(tam*2)):
+      for j in range(0,int(tam2)):
+        for k in range(0, int(tam3)):
+          ax.bar(ind[i]+(j*width), vec[i][j][k], width, color=colors[j],ecolor='black', hatch=patterns[k])
+          ax.bar(ind[i]+(j*width), vec[i][j][k+1], width,bottom = vec[i][j][k], color=colors[j],ecolor='black', hatch=patterns[k+1])
+          if (i==0):
+            legend.append(mpatches.Patch(color=colors[j], label=labels[j]))
+    if len(labels)>=tam2:
+      for j in range(0,int(tam3*2)): 
+        legend.append(mpatches.Patch(facecolor='grey',hatch=patterns[j], label=labels[tam2+j]))
+  if tam3==0:
+    ax.set_xticks(ind)
+  else:
+    ax.set_xticks(ind+((tam2-1)*width)/2)
+  ax.set_xticklabels(xticks,fontsize=18)
+  plt.xlabel(xlabel,fontsize=18)
+  plt.ylabel(ylabel,fontsize=18)
+  plt.xticks(fontsize=16)
+  plt.yticks(fontsize=16)
+  #plt.xlim((1,300))
+  plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc='lower left',
+           ncol=3, mode="expand", borderaxespad=0.,fontsize='medium',title=title,handles=legend,fancybox=True, shadow=True)
+  plt.grid(True,alpha=0.4,axis='y',linestyle='--')
+  plt.savefig(name,figsize=(4000,4000),bbox_inches="tight",dpi=300)
   plt.close()
-  plt.plot(Buffer_Underrun_Started_At,Buffer_Underrun_Total_Time , label='linear')
-  plt.xlabel('Segundos')
-  plt.ylabel('Tempo Total')
-  plt.title("Buffer Underrun Total Duration Time")
-  save = 'sim{simu}_cl{iter}_BufferUnderrunDurationTime.pdf'.format(simu=simulation, iter=j)
-  plt.savefig(save)
-  plt.close()
-'''
+
+def plotGraph(vec,name,xlabel='',ylabel='',xticks=[],title='',labels=[]):
+  vec=np.asarray(vec)
+  shapes=vec.shape
+  tam=shapes[0]
+  legend=[]
+  if len(shapes)>1:
+    tam2=shapes[1]
+  else:
+    tam2=0
+  if tam2==0:
+    for i in range(0,int(tam)):
+      x = np.arange(0,len(vec[i]))
+      plt.plot(x,vec[i],color='grey',marker=markers[i])
+  else:
+    for i in range(0,int(tam2)):
+      for j in range (0, int(tam)):
+        toplot = [item[i] for item in vec]
+      x = np.arange(0,int(tam))
+      plt.plot(x,toplot,color=colors[i],marker=markers[i])
+      if len(labels)>=tam2:
+        legend.append(mlines.Line2D([], [], color=colors[i],marker=markers[i], label=labels[i]))
+  plt.xlabel(xlabel,fontsize=18)
+  plt.ylabel(ylabel,fontsize=18)
+  if len(xticks)>0:
+    plt.xticks(x,xticks,fontsize=16)
+  plt.yticks(fontsize=16)
+  plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc='lower left',
+           ncol=4, mode="expand", borderaxespad=0.,fontsize='medium',title=title,handles=legend,fancybox=True, shadow=True)
+  #red_line = mlines.Line2D([], [], color='Red',markersize=15, label='Tier-3')
+  #green_line = mlines.Line2D([], [], color='g',markersize=15, label='Tier-2 EP-2')
+  #blue_line = mlines.Line2D([], [], color='b',markersize=15, label='Tier-2 EP-1')
+  #yellow_line = mlines.Line2D([], [], color='y',markersize=15, label='Tier-1')
+  #plt.legend(title='Enforcement Point')#,handles=[red_line,green_line,blue_line,yellow_line])
+  #plt.title("Server Throughput")
+  #save = 'ServerThroughput.pdf'
+  plt.grid(True,alpha=0.4,axis='y',linestyle='--')
+  plt.savefig(name,figsize=(4000,4000),bbox_inches="tight",dpi=300)
+  plt.close()    
+
+
 
 ################
 # Throughput 
@@ -559,9 +820,9 @@ def qualityGraphs(numSegments):
   #plt.xticks(rotation=45,fontsize=10)
   #plt.yticks(fontsize=10)
   ax.grid(which='both',alpha=0.4,linestyle='--')
-  plt.xlabel('Chunks',fontsize=14)
-  plt.ylabel('Clients per Server Average', fontsize=14)
-  plt.legend(handles=[red_line,green_line,blue_line,yellow_line],bbox_to_anchor=(0.5, 1.3),loc='upper center', fontsize=14,ncol=4,fancybox=True, shadow=True)
+  plt.xlabel('Chunks',fontsize=16)
+  plt.ylabel('Clients per Server Average', fontsize=16)
+  plt.legend(handles=[red_line,green_line,blue_line,yellow_line],bbox_to_anchor=(0.5, 1.3),loc='upper center', fontsize=16,ncol=4,fancybox=True, shadow=True)
   save = 'clientsPerServer.pdf'
   plt.savefig(save,bbox_inches="tight",dpi=300)
   plt.close()
@@ -718,8 +979,10 @@ def graphtotals(numSegments):
     p1,=plt.plot(x,qualityLevelTotals[i],color='r',ls='--',lw=3, label='Fog4Video')
     p2,=plt.plot(x,qualityLevelTotals[i+4],color='g',ls='-.',lw=3, label='Greedy')
     p3,=plt.plot(x,qualityLevelTotals[i+8],color='b',ls=':',lw=3, label='Random')
-    plt.xlabel('Chunks')
-    plt.ylabel('Video bitrate(Kbps)')
+    plt.xlabel('Chunks',fontsize=18)
+    plt.ylabel('Video bitrate(Kbps)',fontsize=18)
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
     red_line = mlines.Line2D([], [], color='r',markersize=15, label='Tier-3')
     green_line = mlines.Line2D([], [], color='g',markersize=15, label='Tier-2 EP-2')
     blue_line = mlines.Line2D([], [], color='b',markersize=15, label='Tier-2 EP-1')
@@ -745,10 +1008,12 @@ def graphtotals(numSegments):
   rects1 = ax.bar(ind - width, StallsTotals[0], width,label='Fog4Video')
   rects2 = ax.bar(ind, StallsTotals[1], width,label='Greedy')
   rects3 = ax.bar(ind + width, StallsTotals[2], width,label='Random')
-  ax.set_ylabel('Number of Stall Events')
+  ax.set_ylabel('Number of Stall Events',fontsize=18)
   ax.set_xticks(ind)
-  ax.set_xticklabels(('Tier-3', 'Tier-2 EP-2', 'Tier-2 EP-1', 'Tier-1'))
+  ax.set_xticklabels(('Tier-3', 'Tier-2 EP-2', 'Tier-2 EP-1', 'Tier-1'),fontsize=18)
   ax.legend()
+  plt.xticks(fontsize=16)
+  plt.yticks(fontsize=16)
   plt.grid(True,axis='y',alpha=0.4,linestyle='--')
   save = 'StallsTotals.pdf'
   plt.savefig(save,bbox_inches="tight",dpi=300)
@@ -761,10 +1026,12 @@ def graphtotals(numSegments):
   rects1 = ax.bar(ind - width, RebuffersTotals[0], width,label='Fog4Video')
   rects2 = ax.bar(ind, RebuffersTotals[1], width,label='Greedy')
   rects3 = ax.bar(ind + width, RebuffersTotals[2], width,label='Random')
-  ax.set_ylabel('Stall Duration (Seconds)')
+  ax.set_ylabel('Stall Duration (Seconds)',fontsize=18)
   ax.set_xticks(ind)
-  ax.set_xticklabels(('Tier-3', 'Tier-2 EP-2', 'Tier-2 EP-1', 'Tier-1'))
+  ax.set_xticklabels(('Tier-3', 'Tier-2 EP-2', 'Tier-2 EP-1', 'Tier-1'),fontsize=18)
   ax.legend()
+  plt.xticks(fontsize=16)
+  plt.yticks(fontsize=16)
   plt.grid(True,axis='y',alpha=0.4,linestyle='--')
   save = 'RebuffersTotals.pdf'
   plt.savefig(save,bbox_inches="tight",dpi=300)
@@ -777,10 +1044,12 @@ def graphtotals(numSegments):
   rects1 = ax.bar(ind - width, MeansTotals[0], width,label='Fog4Video')
   rects2 = ax.bar(ind, MeansTotals[1], width,label='Greedy')
   rects3 = ax.bar(ind + width, MeansTotals[2], width,label='Random')
-  ax.set_ylabel('Bitrate Average (Kbps)')
+  ax.set_ylabel('Bitrate Average (Kbps)',fontsize=18)
   ax.set_xticks(ind)
-  ax.set_xticklabels(('Tier-3', 'Tier-2 EP-2', 'Tier-2 EP-1', 'Tier-1'))
+  ax.set_xticklabels(('Tier-3', 'Tier-2 EP-2', 'Tier-2 EP-1', 'Tier-1'),fontsize=18)
   ax.legend()
+  plt.xticks(fontsize=16)
+  plt.yticks(fontsize=16)
   plt.grid(True,axis='y',alpha=0.4,linestyle='--')
   save = 'BitrateTotals.pdf'
   plt.savefig(save,bbox_inches="tight",dpi=300)
@@ -814,9 +1083,11 @@ def graphtotals(numSegments):
   #rects1 = ax.bar(ind, np.sum(StallsTotals[0]),width,yerr=(1.96*(np.std(StallsTotals[0])/np.sqrt(runs))),label='Fog4Video')
   #rects2 = ax.bar(ind, np.sum(StallsTotals[1]), width,yerr=(1.96*(np.std(StallsTotals[1])/np.sqrt(runs))),label='Greedy')
   #rects3 = ax.bar(ind, np.sum(StallsTotals[2]),width,yerr=(1.96*(np.std(StallsTotals[2])/np.sqrt(runs))),label='Random')
-  ax.set_ylabel('Number of Stall Events')
+  ax.set_ylabel('Number of Stall Events',fontsize=18)
   ax.set_xticks(ind)
-  ax.set_xticklabels(('Fog4Video', 'Greedy', 'Random'))
+  ax.set_xticklabels(('Fog4Video', 'Greedy', 'Random'),fontsize=18)
+  plt.xticks(fontsize=16)
+  plt.yticks(fontsize=16)
   #ax.legend()
   plt.grid(True,axis='y',alpha=0.4,linestyle='--')
   save = 'StallsTotal.pdf'
@@ -836,9 +1107,11 @@ def graphtotals(numSegments):
   #rects1 = ax.bar(ind - width, np.sum(RebuffersTotals[0]),width,yerr=(1.96*(np.std(RebuffersTotals[0])/np.sqrt(runs))),label='Fog4Video')
   #rects2 = ax.bar(ind, np.sum(RebuffersTotals[1]), width,yerr=(1.96*(np.std(RebuffersTotals[1])/np.sqrt(runs))),label='Greedy')
   #rects3 = ax.bar(ind + width, np.sum(RebuffersTotals[2]),width,yerr=(1.96*(np.std(RebuffersTotals[2])/np.sqrt(runs))),label='Random')
-  ax.set_ylabel('Stall Duration (Seconds)')
+  ax.set_ylabel('Stall Duration (Seconds)',fontsize=18)
   ax.set_xticks(ind)
-  ax.set_xticklabels(('Fog4Video', 'Greedy', 'Random'))
+  ax.set_xticklabels(('Fog4Video', 'Greedy', 'Random'),fontsize=18)
+  plt.xticks(fontsize=16)
+  plt.yticks(fontsize=16)
   #ax.legend()
   plt.grid(True,axis='y',alpha=0.4,linestyle='--')
   save = 'RebuffersTotal.pdf'
@@ -894,9 +1167,10 @@ def graphtotals(numSegments):
   #p3,=plt.plot(x,cost[2],color='green',ls=':',lw=1, label='Random')
   rects1 = ax.bar(ind, [np.mean(cost[0])/6,np.mean(cost[1])/6,np.mean(cost[2])/6],width,yerr=[(1.96*(np.std((cost[0]))/np.sqrt(runs)))/6,(1.96*(np.std((cost[1]))/np.sqrt(runs)))/6,(1.96*(np.std((cost[2]))/np.sqrt(runs)))/6],color=(('tab:blue'),('tab:orange'),('tab:green')))
   ax.set_xticks(ind)
-  ax.set_xticklabels(('Fog4Video', 'Greedy', 'Random'))
-  #plt.xlabel('Chunks')
-  plt.ylabel('Monetary Cost per hour (U$)')
+  ax.set_xticklabels(('Fog4Video', 'Greedy', 'Random'),fontsize=18)
+  plt.ylabel('Monetary Cost per hour (U$)',fontsize=18)
+  plt.xticks(fontsize=16)
+  plt.yticks(fontsize=16)
   print(np.mean(cost[0]),np.mean(cost[1]),np.mean(cost[2]))
   print((1.96*(np.std((cost[0]))/np.sqrt(runs))),(1.96*(np.std((cost[1]))/np.sqrt(runs))),(1.96*(np.std((cost[2]))/np.sqrt(runs))))
   #plt.xlim((1,300))
@@ -946,10 +1220,12 @@ def graphtotals(numSegments):
   print(confInts[0])
   print(confInts[1])
   print(confInts[2])
-  ax.set_ylabel('Bitrate (Kbps)')
+  ax.set_ylabel('Bitrate (Kbps)',fontsize=18)
   ax.set_xticks(ind)
-  ax.set_xticklabels(('Initial Bitrate', 'Bitrate Average', 'Final Bitrate'))
-  ax.legend(loc='upper left')
+  ax.set_xticklabels(('Initial Bitrate', 'Bitrate Average', 'Final Bitrate'),fontsize=18)
+  ax.legend(loc='upper left',fontsize=15)
+  plt.xticks(fontsize=16)
+  plt.yticks(fontsize=16)
   plt.grid(True,axis='y',alpha=0.4,linestyle='--')
   #plt.yticks( [0,400,650,1000,1500,2250,3400,4700,6000], ('0','400', '650', '1000', '1500', '2250','3400','4700','6000') )
   save = 'BitrateMean.pdf'
@@ -980,8 +1256,8 @@ def graphtotals(numSegments):
   #print(medians)
   #bp = ax.boxplot(bitrates, positions=pos,notch=1,conf_intervals=conf_intervals,usermedians=medians) #bootstrap=5000,usermedians=medians,conf_intervals=conf_intervals
   bp = ax.boxplot(bitrates, positions=pos,notch=1,bootstrap=1000,showmeans=True,meanline=True)
-  ax.set_xlabel('Mechanism')
-  ax.set_ylabel('Bitrate (Kbps)')
+  ax.set_xlabel('Mechanism',fontsize=18)
+  ax.set_ylabel('Bitrate (Kbps)',fontsize=18)
   ax.set_xticklabels(('Fog4Video', 'Greedy', 'Random'))
   plt.setp(bp['whiskers'], color='k', linestyle='-')
   plt.setp(bp['fliers'], markersize=3.0)
