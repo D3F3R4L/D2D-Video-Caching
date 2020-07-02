@@ -71,6 +71,8 @@ uint16_t n=3;
 uint16_t MaxClientsSV=300;
 uint32_t numberOfUeNodes;
 uint32_t simulationId = 0;
+uint16_t numberOfEnbNodes;
+NodeContainer remoteHosts;
 std::vector <double> throughputs;
 std::vector <double> Rebuffers;
 std::vector <uint64_t> Stalls;
@@ -595,112 +597,92 @@ void ArrayPositionAllocator(Ptr<ListPositionAllocator> HpnPosition, std::string 
     }
 }
 
-void NotifyConnectionEstablishedUe(std::string context,
-    uint64_t imsi,
-    uint16_t cellid,
-    uint16_t rnti)
+void
+NotifyConnectionEstablishedUe (std::string context,
+                               uint64_t imsi,
+                               uint16_t cellid,
+                               uint16_t rnti)
 {
-    NS_LOG_DEBUG(Simulator::Now().GetSeconds()
-        << " " << context << " UE IMSI " << imsi
-        << ": connected to CellId " << cellid << " with RNTI " << rnti);
-
-    std::stringstream temp_cell_dir;
-    std::stringstream ueId;
-    temp_cell_dir << "./v2x_temp/" << cellid;
-    ueId << temp_cell_dir.str() << "/" << rnti;
-    if (mkdir(temp_cell_dir.str().c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) != 0) {
-    }
-    std::ofstream outfile(ueId.str().c_str());
-    outfile << imsi << std::endl;
-    outfile.close();
-
-    // zero the node's previous connection
-    for (uint16_t i =0; i < 2; ++i)
-    {
-        ::cell_ue[i][imsi - 1] = 0;
-    }
-
-    // record the current cell in the matrix
-    ::cell_ue[cellid - 1][imsi - 1] = rnti;
+  std::cout << Simulator::Now ().GetSeconds () << " " << context
+            << " UE IMSI " << imsi
+            << ": connected to CellId " << cellid
+            << " with RNTI " << rnti
+            << std::endl;
 }
 
-void NotifyHandoverStartUe(std::string context,
-    uint64_t imsi,
-    uint16_t cellid,
-    uint16_t rnti,
-    uint16_t targetCellId)
+void
+NotifyHandoverStartUe (std::string context,
+                       uint64_t imsi,
+                       uint16_t cellid,
+                       uint16_t rnti,
+                       uint16_t targetCellId)
 {
-    NS_LOG_DEBUG(Simulator::Now().GetSeconds()
-        << " " << context << " UE IMSI " << imsi
-        << ": previously connected to CellId " << cellid << " with RNTI "
-        << rnti << ", doing handover to CellId " << targetCellId);
-
-    std::stringstream ueId;
-    ueId << "./v2x_temp/" << cellid << "/" << rnti;
-    remove(ueId.str().c_str());
-    ++handNumber;
+  std::cout << Simulator::Now ().GetSeconds () << " " << context
+            << " UE IMSI " << imsi
+            << ": previously connected to CellId " << cellid
+            << " with RNTI " << rnti
+            << ", doing handover to CellId " << targetCellId
+            << std::endl;
 }
 
-void NotifyHandoverEndOkUe(std::string context,
-    uint64_t imsi,
-    uint16_t cellid,
-    uint16_t rnti)
+void
+NotifyHandoverEndOkUe (std::string context,
+                       uint64_t imsi,
+                       uint16_t cellid,
+                       uint16_t rnti)
 {
-    NS_LOG_DEBUG(Simulator::Now().GetSeconds()
-        << " " << context << " UE IMSI " << imsi
-        << ": successful handover to CellId " << cellid << " with RNTI "
-        << rnti);
-
-    std::stringstream target_cell_dir;
-    std::stringstream newUeId;
-    target_cell_dir << "./v2x_temp/" << cellid;
-    newUeId << target_cell_dir.str() << "/" << rnti;
-    if (mkdir(target_cell_dir.str().c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) != 0) {
-    }
-    std::ofstream outfile(newUeId.str().c_str());
-    outfile << imsi << std::endl;
-    outfile.close();
-
+  std::cout << Simulator::Now ().GetSeconds () << " " << context
+            << " UE IMSI " << imsi
+            << ": successful handover to CellId " << cellid
+            << " with RNTI " << rnti
+            << std::endl;
 }
 
-void NotifyConnectionEstablishedEnb(std::string context,
-    uint64_t imsi,
-    uint16_t cellid,
-    uint16_t rnti)
+void
+NotifyConnectionEstablishedEnb (std::string context,
+                                uint64_t imsi,
+                                uint16_t cellid,
+                                uint16_t rnti)
 {
-    NS_LOG_DEBUG(Simulator::Now().GetSeconds()
-        << " " << context << " eNB CellId " << cellid
-        << ": successful connection of UE with IMSI " << imsi << " RNTI "
-        << rnti);
+  std::cout << Simulator::Now ().GetSeconds () << " " << context
+            << " eNB CellId " << cellid
+            << ": successful connection of UE with IMSI " << imsi
+            << " RNTI " << rnti
+            << std::endl;
 }
 
-void NotifyHandoverStartEnb(std::string context,
-    uint64_t imsi,
-    uint16_t cellid,
-    uint16_t rnti,
-    uint16_t targetCellId)
+void
+NotifyHandoverStartEnb (std::string context,
+                        uint64_t imsi,
+                        uint16_t cellid,
+                        uint16_t rnti,
+                        uint16_t targetCellId)
 {
-    NS_LOG_DEBUG(Simulator::Now().GetSeconds()
-        << " " << context << " eNB CellId " << cellid
-        << ": start handover of UE with IMSI " << imsi << " RNTI "
-        << rnti << " to CellId " << targetCellId);
+  std::cout << Simulator::Now ().GetSeconds () << " " << context
+            << " eNB CellId " << cellid
+            << ": start handover of UE with IMSI " << imsi
+            << " RNTI " << rnti
+            << " to CellId " << targetCellId
+            << std::endl;
 }
 
-void NotifyHandoverEndOkEnb(std::string context,
-    uint64_t imsi,
-    uint16_t cellid,
-    uint16_t rnti)
+void
+NotifyHandoverEndOkEnb (std::string context,
+                        uint64_t imsi,
+                        uint16_t cellid,
+                        uint16_t rnti)
 {
-    NS_LOG_DEBUG(Simulator::Now().GetSeconds()
-        << " " << context << " eNB CellId " << cellid
-        << ": completed handover of UE with IMSI " << imsi << " RNTI "
-        << rnti);
+  std::cout << Simulator::Now ().GetSeconds () << " " << context
+            << " eNB CellId " << cellid
+            << ": completed handover of UE with IMSI " << imsi
+            << " RNTI " << rnti
+            << std::endl;
 }
+
 
 std::vector <uint>
-searchArea(Ptr<Node> c,NodeContainer t)
+searchArea(Ptr<Node> c,NodeContainer t, double r)
 {
-  double r = 25;
   std::list <uint> index;
   Ptr<MobilityModel> mob = c->GetObject<MobilityModel>();
   double x = mob->GetPosition().x;
@@ -725,17 +707,13 @@ searchArea(Ptr<Node> c,NodeContainer t)
 }
 
 void
-choiceServer (Ptr<Node> client,NodeContainer ues,TcpStreamClientHelper clientHelper, TcpStreamServerHelper serverHelper, NodeContainer macroCells,NodeContainer sv)
-{
+choiceServer (Ptr<Node> client,NodeContainer ues,TcpStreamClientHelper clientHelper, TcpStreamServerHelper serverHelper, NodeContainer macroCells,NodeContainer smallCells)
+{ 
   std::vector <double> sizes {90,146.25,225,337.5,506.25,765,1057.5,1350};
-  NodeContainer smallCells;
-  for (uint i = 1; i < macroCells.GetN(); i++)
-  {
-    smallCells.Add(macroCells.Get(i));
-  }
+  NodeContainer sv = remoteHosts;
   int value = uniformDis();
   double tam = sizes.at(value);
-  std::vector <uint> devices = searchArea(client ,ues);
+  std::vector <uint> devices = searchArea(client ,ues,25);
   if (devices.size()>0)
   {
     double bestEnergy=0;
@@ -763,7 +741,7 @@ choiceServer (Ptr<Node> client,NodeContainer ues,TcpStreamClientHelper clientHel
       return ;
     }
   }
-  std::vector <uint> smalls = searchArea(client ,smallCells);
+  std::vector <uint> smalls = searchArea(client ,smallCells,75);
   if (smalls.size()>0)
   {
     double bestCap=0;
@@ -788,7 +766,7 @@ choiceServer (Ptr<Node> client,NodeContainer ues,TcpStreamClientHelper clientHel
       return;
     }
   }
-  std::vector <uint> macros = searchArea(client ,macroCells);
+  std::vector <uint> macros = searchArea(client ,macroCells,200);
   if (macros.size()>0)
   {
     double bestCap=0;
@@ -817,17 +795,13 @@ choiceServer (Ptr<Node> client,NodeContainer ues,TcpStreamClientHelper clientHel
 }
 
 void
-storage (Ptr<Node> client,NodeContainer ues,TcpStreamClientHelper clientHelper, TcpStreamServerHelper serverHelper, NodeContainer macroCells,NodeContainer sv)
+storage (Ptr<Node> client,NodeContainer ues,TcpStreamClientHelper clientHelper, TcpStreamServerHelper serverHelper, NodeContainer macroCells,NodeContainer smallCells)
 {
   std::vector <double> sizes {90,146.25,225,337.5,506.25,765,1057.5,1350};
-  NodeContainer smallCells;
-  for (uint i = 1; i < macroCells.GetN(); i++)
-  {
-    smallCells.Add(macroCells.Get(i));
-  }
+  NodeContainer sv = remoteHosts;
   int value = uniformDis();
   double tam = sizes.at(value);
-  std::vector <uint> devices = searchArea(client ,ues);
+  std::vector <uint> devices = searchArea(client ,ues,25);
   if (devices.size()>0)
   {
     double bestQx=0;
@@ -852,7 +826,7 @@ storage (Ptr<Node> client,NodeContainer ues,TcpStreamClientHelper clientHelper, 
       return ;
     }
   }
-  std::vector <uint> smalls = searchArea(client ,smallCells);
+  std::vector <uint> smalls = searchArea(client ,smallCells,75);
   if (smalls.size()>0)
   {
     double bestQy=0;
@@ -877,7 +851,7 @@ storage (Ptr<Node> client,NodeContainer ues,TcpStreamClientHelper clientHelper, 
       return;
     }
   }
-  std::vector <uint> macros = searchArea(client ,macroCells);
+  std::vector <uint> macros = searchArea(client ,macroCells,200);
   if (macros.size()>0)
   {
     double bestQz=0;
@@ -906,10 +880,10 @@ storage (Ptr<Node> client,NodeContainer ues,TcpStreamClientHelper clientHelper, 
 }
 
 void
-greedy (Ptr<Node> client,NodeContainer ues,TcpStreamClientHelper clientHelper, TcpStreamServerHelper serverHelper, NodeContainer macroCells,NodeContainer sv)
+greedy (Ptr<Node> client,NodeContainer ues,TcpStreamClientHelper clientHelper, TcpStreamServerHelper serverHelper, NodeContainer macroCells,NodeContainer smallCells)
 {
   std::vector <double> sizes {90,146.25,225,337.5,506.25,765,1057.5,1350};
-  NodeContainer smallCells;
+  NodeContainer sv = remoteHosts;
   Ptr<Node> bestue=NULL;
   double bestueDist=10000;
   double bestueCap;
@@ -922,13 +896,10 @@ greedy (Ptr<Node> client,NodeContainer ues,TcpStreamClientHelper clientHelper, T
   Ptr<MobilityModel> mob = client->GetObject<MobilityModel>();
   double x = mob->GetPosition().x;
   double y = mob->GetPosition().y;
-  for (uint i = 1; i < macroCells.GetN(); i++)
-  {
-    smallCells.Add(macroCells.Get(i));
-  }
+
   int value = uniformDis();
   double tam = sizes.at(value);
-  std::vector <uint> devices = searchArea(client ,ues);
+  std::vector <uint> devices = searchArea(client ,ues,25);
   if (devices.size()>0)
   {
     for (uint i = 0; i < devices.size(); i++)
@@ -951,7 +922,7 @@ greedy (Ptr<Node> client,NodeContainer ues,TcpStreamClientHelper clientHelper, T
       }
     }
   }
-  std::vector <uint> smalls = searchArea(client ,smallCells);
+  std::vector <uint> smalls = searchArea(client ,smallCells,75);
   if (smalls.size()>0)
   {
     for (uint i = 0; i < smalls.size(); i++)
@@ -973,7 +944,7 @@ greedy (Ptr<Node> client,NodeContainer ues,TcpStreamClientHelper clientHelper, T
       }
     }
   }
-  std::vector <uint> macros = searchArea(client ,macroCells);
+  std::vector <uint> macros = searchArea(client ,macroCells,200);
   if (macros.size()>0)
   {
     for (uint i = 0; i < macros.size(); i++)
@@ -1016,96 +987,6 @@ greedy (Ptr<Node> client,NodeContainer ues,TcpStreamClientHelper clientHelper, T
   NS_LOG_UNCOND("Cloud");
 }
 
-void
-aleatorio (Ptr<Node> client,NodeContainer ues,TcpStreamClientHelper clientHelper, TcpStreamServerHelper serverHelper, NodeContainer macroCells,NodeContainer sv)
-{
-  std::vector <double> sizes {90,146.25,225,337.5,506.25,765,1057.5,1350};
-  NodeContainer smallCells;
-  for (uint i = 1; i < macroCells.GetN(); i++)
-  {
-    smallCells.Add(macroCells.Get(i));
-  }
-  int value = uniformDis();
-  double tam = sizes.at(value);
-  std::vector <uint> devices = searchArea(client ,ues);
-  if (devices.size()>0)
-  {
-    double bestEnergy=0;
-    double bestCap=0;
-    Ptr<Node> bestue=NULL;
-    for (uint i = 0; i < devices.size(); i++)
-    {
-      Ptr<Node>ue = ues.Get(devices[i]);
-      double Energy = clientHelper.GetEnergy(ue);
-      double Cap = clientHelper.GetStorage(ue);
-      if (Energy>0 and Cap>tam)
-      {
-        if (Energy>bestEnergy and Cap>bestCap)
-        {
-          bestEnergy=Energy;
-          bestCap=Cap;
-          bestue=ue;
-        }
-      }
-    }
-    if (bestue!=NULL)
-    {NS_LOG_UNCOND("D2D");
-      clientHelper.SetStorage(bestue,bestCap-tam);
-      ServerHandover(clientHelper,client,d2dAddress);
-      return ;
-    }
-  }
-  std::vector <uint> smalls = searchArea(client ,smallCells);
-  if (smalls.size()>0)
-  {
-    double bestCap=0;
-    Ptr<Node> bestsmall=NULL;
-    for (uint i = 0; i < smalls.size(); i++)
-    {
-      Ptr<Node>cell = smallCells.Get(smalls[i]);
-      double Cap = serverHelper.GetStorage(sv.Get(1));
-      if (Cap>0)
-      {
-        if (Cap>bestCap)
-        {
-          bestCap=Cap;
-          bestsmall=cell;
-        }
-      }
-    }
-    if (bestsmall!=NULL)
-    { NS_LOG_UNCOND("Small Cell");
-      serverHelper.SetStorage(sv.Get(1),bestCap-tam);
-      ServerHandover(clientHelper,client,SmallCellAddress);
-      return;
-    }
-  }
-  std::vector <uint> macros = searchArea(client ,macroCells);
-  if (macros.size()>0)
-  {
-    double bestCap=0;
-    Ptr<Node> bestmacro=NULL;
-    for (uint i = 0; i < macros.size(); i++)
-    {
-      Ptr<Node>cell = macroCells.Get(macros[i]);
-      double Cap = serverHelper.GetStorage(sv.Get(2));
-      if (Cap>0)
-      {
-        if (Cap>bestCap)
-        {
-          bestCap=Cap;
-          bestmacro=cell;
-        }
-      }
-    }
-    if (bestmacro!=NULL)
-    {NS_LOG_UNCOND("Macro Cell");
-      serverHelper.SetStorage(sv.Get(2),bestCap-tam);
-      ServerHandover(clientHelper,client,MacroCellAddress);
-      return;
-    }
-  }
-}
 
 static void
 PrintCellInfo (Ptr<EnergySource> es)
@@ -1131,13 +1012,14 @@ main (int argc, char *argv[])
   // The simulation id is used to distinguish log file results from potentially multiple consequent simulation runs.
   simulationId = 0;
   numberOfUeNodes = 11;
-  uint16_t numberOfEnbNodes = 5;
+  numberOfEnbNodes = 4;
+  uint16_t numberOfSmallNodes = 9;
   uint32_t numberOfServers = 4;
   std::string adaptationAlgo = "esba";
   std::string segmentSizeFilePath = "src/esba-dash-energy/dash/segmentSizesBigBuck90.txt";
   //bool shortGuardInterval = true;
   int seedValue = 0;
-  uint16_t pol=3;
+  uint16_t pol=0;
 
   //lastRx=[numberOfUeNodes];
   //LogComponentEnable("dash-migrationExample", LOG_LEVEL_ALL);
@@ -1166,12 +1048,12 @@ main (int argc, char *argv[])
   Config::SetDefault ("ns3::LteEnbNetDevice::UlBandwidth", UintegerValue (50));
   
   Config::SetDefault ("ns3::LteEnbRrc::DefaultTransmissionMode", UintegerValue (1));
-  Config::SetDefault ("ns3::RadioEnvironmentMapHelper::Bandwidth", UintegerValue (100));
+  //Config::SetDefault ("ns3::RadioEnvironmentMapHelper::Bandwidth", UintegerValue (100));
   Config::SetDefault ("ns3::LteRlcUm::MaxTxBufferSize", UintegerValue(100*1024));
-  Config::SetDefault ("ns3::LteEnbPhy::TxPower", DoubleValue (46.0));
-  Config::SetDefault ("ns3::LteEnbPhy::NoiseFigure", DoubleValue (5.0));
-  Config::SetDefault ("ns3::LteUePhy::NoiseFigure", DoubleValue (7.0));
-  Config::SetDefault ("ns3::LteUePhy::TxPower", DoubleValue (24.0));
+  //Config::SetDefault ("ns3::LteEnbPhy::TxPower", DoubleValue (46.0));
+  //Config::SetDefault ("ns3::LteEnbPhy::NoiseFigure", DoubleValue (5.0));
+  //Config::SetDefault ("ns3::LteUePhy::NoiseFigure", DoubleValue (7.0));
+  //Config::SetDefault ("ns3::LteUePhy::TxPower", DoubleValue (24.0));
 
   Config::SetDefault("ns3::TcpSocket::SegmentSize", UintegerValue (1446));
   Config::SetDefault("ns3::TcpSocket::SndBufSize", UintegerValue (524288));
@@ -1185,10 +1067,8 @@ main (int argc, char *argv[])
   lteHelper->SetSchedulerAttribute("nMux", UintegerValue(1)); // the maximum number of UE selected by TD scheduler
   lteHelper->SetSchedulerAttribute("PssFdSchedulerType", StringValue("CoItA")); // PF scheduler type in PSS
   lteHelper->SetHandoverAlgorithmType("ns3::A2A4RsrqHandoverAlgorithm");
-  lteHelper->SetHandoverAlgorithmAttribute("ServingCellThreshold",
-  UintegerValue(34));
-  lteHelper->SetHandoverAlgorithmAttribute("NeighbourCellOffset",
-  UintegerValue(0));
+  lteHelper->SetHandoverAlgorithmAttribute("ServingCellThreshold", UintegerValue(34));
+  lteHelper->SetHandoverAlgorithmAttribute("NeighbourCellOffset", UintegerValue(1));
   lteHelper->EnableTraces();
 
   /*// Propagation Parameters
@@ -1198,16 +1078,15 @@ main (int argc, char *argv[])
       StringValue("ns3::NakagamiPropagationLossModel"));*/
 
     //-------------Antenna Parameters
-  lteHelper->SetEnbAntennaModelType("ns3::CosineAntennaModel");
-  lteHelper->SetEnbAntennaModelAttribute("Orientation", DoubleValue(0));
-  lteHelper->SetEnbAntennaModelAttribute("Beamwidth", DoubleValue(60));
-  Config::SetDefault("ns3::LteHelper::UseIdealRrc", BooleanValue(false));
+  //lteHelper->SetEnbAntennaModelType("ns3::CosineAntennaModel");
+  //lteHelper->SetEnbAntennaModelAttribute("Orientation", DoubleValue(0));
+  //lteHelper->SetEnbAntennaModelAttribute("Beamwidth", DoubleValue(60));
+  //Config::SetDefault("ns3::LteHelper::UseIdealRrc", BooleanValue(false));
 
   // parse again so you can override default values from the command line
   Ptr<Node> pgw = epcHelper->GetPgwNode ();
   
    // Create a single RemoteHost
-  NodeContainer remoteHosts;
   remoteHosts.Create (numberOfServers);
   Ptr<Node> remoteHost = remoteHosts.Get (0);
   Ptr<Node> remoteHost2 = remoteHosts.Get (1);
@@ -1376,6 +1255,9 @@ UeNodes.Create (numberOfUeNodes);
 NodeContainer EnbNodes;
 EnbNodes.Create (numberOfEnbNodes);
 
+NodeContainer smallNodes;
+smallNodes.Create (numberOfSmallNodes);
+
   std::vector <std::pair <Ptr<Node>, std::string> > clients;
   for (NodeContainer::Iterator i = UeNodes.Begin (); i != UeNodes.End (); ++i)
     {
@@ -1458,10 +1340,17 @@ EnbNodes.Create (numberOfEnbNodes);
   Ptr < ListPositionAllocator > HpnPosition = CreateObject < ListPositionAllocator > ();
   ArrayPositionAllocator(HpnPosition,"CellsDataset");
 
-  MobilityHelper mobilityEnb;
-  mobilityEnb.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-  mobilityEnb.SetPositionAllocator(HpnPosition);
-  mobilityEnb.Install(EnbNodes);
+  MobilityHelper mobility;
+  mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+  mobility.SetPositionAllocator(HpnPosition);
+  mobility.Install(EnbNodes);
+
+  Ptr < ListPositionAllocator > SmallPosition = CreateObject < ListPositionAllocator > ();
+  ArrayPositionAllocator(SmallPosition,"SmallDataset");
+  MobilityHelper mobilitySmall;
+  mobilitySmall.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+  mobilitySmall.SetPositionAllocator(SmallPosition);
+  mobilitySmall.Install(smallNodes);
 
     // remote host mobility (constant)
   MobilityHelper remoteHostMobility;
@@ -1483,6 +1372,9 @@ EnbNodes.Create (numberOfEnbNodes);
   //ue_mobil.Install(UeNodes.Begin(), UeNodes.End());
 
   NetDeviceContainer enbLteDevs = lteHelper->InstallEnbDevice (EnbNodes);
+  Config::SetDefault ("ns3::LteEnbPhy::TxPower", DoubleValue (23));
+  lteHelper->SetEnbAntennaModelType ("ns3::IsotropicAntennaModel");
+  enbLteDevs = lteHelper->InstallEnbDevice (smallNodes);
   NetDeviceContainer ueLteDevs = lteHelper->InstallUeDevice (UeNodes);
 
   // Install the IP stack on the UEs
@@ -1690,7 +1582,7 @@ EnbNodes.Create (numberOfEnbNodes);
     {
       double startTime = 2.0;
       clientApps.Get (i)->SetStartTime (Seconds (startTime));
-      Simulator::Schedule(Seconds(startTime),&choiceServer,UeNodes.Get(i), UeNodes,clientHelper,serverHelper,EnbNodes,remoteHosts);
+      Simulator::Schedule(Seconds(startTime),&choiceServer,UeNodes.Get(i), UeNodes,clientHelper,serverHelper,EnbNodes,smallNodes);
     }
   }
   else
@@ -1701,7 +1593,7 @@ EnbNodes.Create (numberOfEnbNodes);
       {
         double startTime = 2.0;
         clientApps.Get (i)->SetStartTime (Seconds (startTime));
-        Simulator::Schedule(Seconds(startTime),&storage,UeNodes.Get(i), UeNodes,clientHelper,serverHelper,EnbNodes,remoteHosts);
+        Simulator::Schedule(Seconds(startTime),&storage,UeNodes.Get(i), UeNodes,clientHelper,serverHelper,EnbNodes,smallNodes);
       }
     }
     else
@@ -1712,8 +1604,7 @@ EnbNodes.Create (numberOfEnbNodes);
         {
           double startTime = 2.0;
           clientApps.Get (i)->SetStartTime (Seconds (startTime));
-          int value = rand();
-          Simulator::Schedule(Seconds(startTime),&greedy,UeNodes.Get(i), UeNodes,clientHelper,serverHelper,EnbNodes,remoteHosts);
+          Simulator::Schedule(Seconds(startTime),&greedy,UeNodes.Get(i), UeNodes,clientHelper,serverHelper,EnbNodes,smallNodes);
         }
       }
       else
@@ -1725,7 +1616,7 @@ EnbNodes.Create (numberOfEnbNodes);
             double startTime = 2.0;
             clientApps.Get (i)->SetStartTime (Seconds (startTime));
             int value = rand();
-            Simulator::Schedule(Seconds(startTime),&aleatorio,UeNodes.Get(i), UeNodes,clientHelper,serverHelper,EnbNodes,remoteHosts);
+            Simulator::Schedule(Seconds(startTime),&ServerHandover,clientHelper,UeNodes.Get(i),svAddress[value]);
           }
         }
       }

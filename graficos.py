@@ -57,6 +57,8 @@ Stalls=[]
 StallsConf=[]
 Rebuffer=[]
 RebufferConf=[]
+Quality=[]
+QualityConf=[]
 patterns = [ "/","x", "|" , "-" , "+", "\\" , "o", "O", ".", "*" ]
 #colors=['dimgray', 'gray', 'darkgray','silver','lightgrey']
 colors=['black','red','blue', 'blueviolet','green','lightsteelblue','limegreen']
@@ -79,6 +81,8 @@ def main():
     StRdConf=[]
     fogNumber=[]
     fogNumberConf=[]
+    QualityTotals=[]
+    QualityTotalsConf=[]
     Clients=k
     folder='{num}'.format(num=Clients)
     folders=os.listdir(folder)
@@ -100,6 +104,9 @@ def main():
       srd,srdConf=StallsRebuffers(k)
       StRd.append(srd)
       StRdConf.append(srdConf)
+      bits,bitsConf=bitrate()
+      QualityTotals.append(bits)
+      QualityTotalsConf.append(bitsConf)
       #resp,conf2,num,numConf=fogStatus()
       #totalCost.append(np.sum(resp[0]))
       #totalCostConf.append(conf2)
@@ -113,6 +120,8 @@ def main():
     barGraph(totalUsage, name='usage.png',xlabel='time(s)')
     barGraph(StRd, name='Stalls.png',xlabel='Stalls')
     playback.append(startTime)
+    Quality.append(QualityTotals)
+    QualityConf.append(QualityTotalsConf)
     migrationConf.append([item[0] for item in startTimeConf])
     bufferingConf.append([item[1] for item in startTimeConf])
     migration.append([item[0] for item in startTime])
@@ -138,12 +147,45 @@ def main():
   barGraph(buffering,bufferingConf,'buffering.pdf','Number of Microservices','buffering Time (s)',xticks=numberOfClients,labels=comp)
   barGraph(Stalls,StallsConf,'Stalls.pdf','Number of Microservices','Number of Stalls',xticks=numberOfClients,labels=comp)
   barGraph(Rebuffer,RebufferConf,'Rebuffers.pdf','Number of Microservices','Rebuffer time (s)',xticks=numberOfClients,labels=comp)
+  barGraph(Quality,QualityConf,'Bitrate.pdf','Number of Microservices','Bitrate (Mbps)',xticks=numberOfClients,labels=comp)
   stackedBarGraph(playback,'start.pdf','Number of Microservices','Playback Start Time (s)',xticks=numberOfClients,labels=['PLI','Fog4VR','Greedy','Random','Cloud','Migration Time', 'buffering Time'])
   #plotGraph(fair, 'usage.pdf','Number of Microservices','Load Distribution (Jain Fairness)',xticks=numberOfClients,labels=comp)
   #barGraph(numberTotal,numberTotalConf,'number.pdf','Number of Microservices','Microservices on fogs',xticks=numberOfClients,labels=comp)#,'Nuvem'])
   #print(fair)
   #print(numberTotal)
   print('Finished')
+
+def bitrate():
+  i=0
+  kbpsMean=[]
+  while i<runs:
+    j=0
+    simulation=i
+    files= '*sim{simu}_*downloadLog*'.format(simu=simulation)
+    files=glob.glob(files)
+    kbps=[]
+    bufferingTime=[]
+    while j<len(files):
+      name=files[j]
+      file=pd.read_csv(name, sep=';',index_col=False)
+      bitrates=np.array(file['Segment_Size'])
+      begins=np.array(file['Download_Start'])
+      ends=np.array(file['Download_End'])
+      bitrateSum=np.sum(bitrates)
+      if (len(begins)==0):
+        kbps.append(0)
+      else:
+        begin=begins[0]
+        end=ends[-1]
+        kbps.append((bitrateSum*8)/((end-begin)*1000000))
+      j+=1
+    kbpsMean.append(np.mean(kbps))
+    i+=1
+  vec=[]
+  conf=[]
+  vec.append(np.mean(kbpsMean))
+  conf.append(np.std(kbpsMean))
+  return vec,conf
 
 def playbackStart():
   i=0
@@ -197,10 +239,10 @@ def StallsRebuffers(num):
       file=pd.read_csv(name, sep=';',index_col=False)
       duration=np.array(file['Buffer_Underrun_Duration'])
       St.append(len(duration))
-      Rd.append(np.sum(duration))  
+      Rd.append(np.nansum(duration))  
       j+=1
-    StMean.append(np.mean(St))
-    RdMean.append(np.nanmean(Rd))
+    StMean.append(np.sum(St))
+    RdMean.append(np.sum(Rd))
     i+=1
   vec=[]
   Conf=[]
