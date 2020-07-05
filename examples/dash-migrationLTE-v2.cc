@@ -1320,14 +1320,14 @@ smallNodes.Create (numberOfSmallNodes);
   std::cout << tobascoDir << "\n";
   std::cout << dir << "\n";
 
-  /*std::ofstream clientPosLog;
+  std::ofstream clientPosLog;
   std::string clientPos = dashLogDirectory + adaptationAlgo + "/" + ToString (numberOfUeNodes) + "/" + "sim" + ToString (simulationId) + "_"  + "clientPos.txt";
   clientPosLog.open (clientPos.c_str());
   std::cout << clientPos << "\n";
   NS_ASSERT_MSG (clientPosLog.is_open(), "Couldn't open clientPosLog file");
 
   // allocate clients to positions
-  for (uint i = 0; i < numberOfUeNodes; i++)
+  /*for (uint i = 0; i < numberOfUeNodes; i++)
     {
       Vector pos = Vector (randPosAlloc->GetNext());
       positionAlloc->Add (pos);
@@ -1336,6 +1336,21 @@ smallNodes.Create (numberOfSmallNodes);
       clientPosLog << ToString(pos.x) << ", " << ToString(pos.y) << ", " << ToString(pos.z) << "\n";
       clientPosLog.flush ();
     }*/
+  Ptr<RandomBoxPositionAllocator> randPosAlloc = CreateObject<RandomBoxPositionAllocator> ();
+  randPosAlloc->AssignStreams (simulationId);
+  Ptr<UniformRandomVariable> xVal = CreateObject<UniformRandomVariable> ();
+  xVal->SetAttribute ("Min", DoubleValue (-1000));
+  xVal->SetAttribute ("Max", DoubleValue (1000));
+  randPosAlloc->SetAttribute ("X", PointerValue (xVal));
+  Ptr<UniformRandomVariable> yVal = CreateObject<UniformRandomVariable> ();
+  yVal->SetAttribute ("Min", DoubleValue (-1000));
+  yVal->SetAttribute ("Max", DoubleValue (1000));
+  randPosAlloc->SetAttribute ("Y", PointerValue (yVal));
+  Ptr<UniformRandomVariable> zVal = CreateObject<UniformRandomVariable> ();
+  zVal->SetAttribute ("Min", DoubleValue (0));
+  zVal->SetAttribute ("Max", DoubleValue (1.5));
+  randPosAlloc->SetAttribute ("Z", PointerValue (zVal));
+
 
   Ptr < ListPositionAllocator > HpnPosition = CreateObject < ListPositionAllocator > ();
   ArrayPositionAllocator(HpnPosition,"CellsDataset");
@@ -1359,8 +1374,14 @@ smallNodes.Create (numberOfSmallNodes);
   remoteHostMobility.Install(remoteHosts);
 
   Ptr < ListPositionAllocator > UePosition = CreateObject < ListPositionAllocator > ();
-  ArrayPositionAllocator(UePosition,"UEDataset");
-
+  //ArrayPositionAllocator(UePosition,"UEDataset");
+  for (uint i = 0; i < numberOfUeNodes; i++)
+  {
+    Vector pos = Vector (randPosAlloc->GetNext());
+    UePosition->Add (pos);
+    clientPosLog << ToString(pos.x) << ", " << ToString(pos.y) << ", " << ToString(pos.z) << "\n";
+    clientPosLog.flush ();
+  }
   MobilityHelper mobilityUe;
   mobilityUe.SetMobilityModel("ns3::ConstantPositionMobilityModel");
   mobilityUe.SetPositionAllocator(UePosition);
