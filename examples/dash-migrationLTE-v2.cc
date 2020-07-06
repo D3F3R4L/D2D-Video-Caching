@@ -112,6 +112,21 @@ rand()
   return value;
 }
 
+template<typename Iter, typename RandomGenerator>
+Iter select_randomly(Iter start, Iter end, RandomGenerator& g) {
+    std::uniform_int_distribution<> dis(0, std::distance(start, end) - 1);
+    std::advance(start, dis(g));
+    return start;
+}
+
+template<typename Iter>
+Iter select_randomly(Iter start, Iter end) {
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    return select_randomly(start, end, gen);
+}
+
+
 void
 LogStall (double sv1,double sv2,double sv3,double cloud)
 {
@@ -805,23 +820,26 @@ storage (Ptr<Node> client,NodeContainer ues,TcpStreamClientHelper clientHelper, 
   if (devices.size()>0)
   {
     double bestQx=0;
+    double Space=0;
     Ptr<Node> bestue=NULL;
     for (uint i = 0; i < devices.size(); i++)
     {
       Ptr<Node>ue = ues.Get(devices[i]);
       double Cap = clientHelper.GetStorage(ue);
-      if (Cap>tam)
+      double Qx=((Cap-tam)*2)-tam;
+      if (Qx>0)
       {
-        if (Cap>bestQx)
-        {
-          bestQx=Cap;
+        if (Qx>bestQx)
+        { 
+          Space=Cap-tam;
+          bestQx=Qx;
           bestue=ue;
         }
       }
     }
     if (bestue!=NULL)
     {NS_LOG_UNCOND("D2D");
-      clientHelper.SetStorage(bestue,bestQx-tam);
+      clientHelper.SetStorage(bestue,Space);
       ServerHandover(clientHelper,client,d2dAddress);
       return ;
     }
@@ -830,23 +848,26 @@ storage (Ptr<Node> client,NodeContainer ues,TcpStreamClientHelper clientHelper, 
   if (smalls.size()>0)
   {
     double bestQy=0;
+    double Space=0;
     Ptr<Node> bestsmall=NULL;
     for (uint i = 0; i < smalls.size(); i++)
     {
       Ptr<Node>cell = smallCells.Get(smalls[i]);
       double Cap = serverHelper.GetStorage(sv.Get(1));
-      if (Cap>tam)
+      double Qy=((Cap-tam)*2/10)-tam;
+      if (Qy>0)
       {
-        if (Cap>bestQy)
+        if (Qy>bestQy)
         {
-          bestQy=Cap;
+          Space=Cap-tam;
+          bestQy=Qy;
           bestsmall=cell;
         }
       }
     }
     if (bestsmall!=NULL)
     { NS_LOG_UNCOND("Small Cell");
-      serverHelper.SetStorage(sv.Get(1),bestQy-tam);
+      serverHelper.SetStorage(sv.Get(1),Space);
       ServerHandover(clientHelper,client,SmallCellAddress);
       return;
     }
@@ -855,15 +876,18 @@ storage (Ptr<Node> client,NodeContainer ues,TcpStreamClientHelper clientHelper, 
   if (macros.size()>0)
   {
     double bestQz=0;
+    double Space=0;
     Ptr<Node> bestmacro=NULL;
     for (uint i = 0; i < macros.size(); i++)
     {
       Ptr<Node>cell = macroCells.Get(macros[i]);
       double Cap = serverHelper.GetStorage(sv.Get(2));
-      if (Cap>tam)
+      double Qz=((Cap-tam)*2/100)-tam;
+      if (Qz>0)
       {
-        if (Cap>bestQz)
+        if (Qz>bestQz)
         {
+          Space=Cap-tam;
           bestQz=Cap;
           bestmacro=cell;
         }
@@ -987,6 +1011,83 @@ greedy (Ptr<Node> client,NodeContainer ues,TcpStreamClientHelper clientHelper, T
   NS_LOG_UNCOND("Cloud");
 }
 
+void
+aleatorio (Ptr<Node> client,NodeContainer ues,TcpStreamClientHelper clientHelper, TcpStreamServerHelper serverHelper, NodeContainer macroCells,NodeContainer smallCells)
+{
+  std::vector <double> sizes {90,146.25,225,337.5,506.25,765,1057.5,1350};
+  std::vector<Address> select;
+  select.push_back(cloudAddress);
+  NodeContainer sv = remoteHosts;
+  bool d2d=false;
+  bool small=false;
+  bool macro=false;
+  Ptr<MobilityModel> mob = client->GetObject<MobilityModel>();
+  double x = mob->GetPosition().x;
+  double y = mob->GetPosition().y;
+
+  int value = uniformDis();
+  double tam = sizes.at(value);
+  std::vector <uint> devices = searchArea(client ,ues,25);
+  if (devices.size()>0)
+  {
+    for (uint i = 0; i < devices.size(); i++)
+    {
+      Ptr<Node>ue = ues.Get(devices[i]);
+      double Cap = clientHelper.GetStorage(ue);
+      if (Cap>tam)
+      {
+      	select.push_back(d2dAddress);
+      }
+    }
+  }
+  std::vector <uint> smalls = searchArea(client ,smallCells,75);
+  if (smalls.size()>0)
+  {
+    for (uint i = 0; i < smalls.size(); i++)
+    {
+      Ptr<Node>cell = smallCells.Get(smalls[i]);
+      double Cap = serverHelper.GetStorage(sv.Get(1));
+      if (Cap>tam)
+      {
+      	select.push_back(SmallCellAddress);
+      }
+    }
+  }
+  std::vector <uint> macros = searchArea(client ,macroCells,200);
+  if (macros.size()>0)
+  {
+    for (uint i = 0; i < macros.size(); i++)
+    {
+      Ptr<Node>cell = macroCells.Get(macros[i]);
+      double Cap = serverHelper.GetStorage(sv.Get(2));
+      if (Cap>tam)
+      {
+        select.push_back(MacroCellAddress);
+      }
+    }
+  }
+  Address r = *select_randomly(select.begin(), select.end());
+  if (r==d2dAddress)
+  {
+  	NS_LOG_UNCOND("D2D");
+  	ServerHandover(clientHelper,client,r);
+  	return;
+  }
+  if (r==SmallCellAddress)
+  {
+  	NS_LOG_UNCOND("Small");
+  	ServerHandover(clientHelper,client,r);
+  	return;
+  }
+  if (r==MacroCellAddress)
+  {
+  	NS_LOG_UNCOND("Macro");
+  	ServerHandover(clientHelper,client,r);
+  	return;
+  }
+  NS_LOG_UNCOND("Cloud");
+  ServerHandover(clientHelper,client,r);
+}
 
 static void
 PrintCellInfo (Ptr<EnergySource> es)
@@ -1019,7 +1120,7 @@ main (int argc, char *argv[])
   std::string segmentSizeFilePath = "src/esba-dash-energy/dash/segmentSizesBigBuck90.txt";
   //bool shortGuardInterval = true;
   int seedValue = 0;
-  uint16_t pol=0;
+  uint16_t pol=3;
 
   //lastRx=[numberOfUeNodes];
   //LogComponentEnable("dash-migrationExample", LOG_LEVEL_ALL);
@@ -1636,8 +1737,7 @@ smallNodes.Create (numberOfSmallNodes);
           {
             double startTime = 2.0;
             clientApps.Get (i)->SetStartTime (Seconds (startTime));
-            int value = rand();
-            Simulator::Schedule(Seconds(startTime),&ServerHandover,clientHelper,UeNodes.Get(i),svAddress[value]);
+            Simulator::Schedule(Seconds(startTime),&aleatorio,UeNodes.Get(i), UeNodes,clientHelper,serverHelper,EnbNodes,smallNodes);
           }
         }
       }
