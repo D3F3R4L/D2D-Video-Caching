@@ -1161,7 +1161,8 @@ aleatorio (int Id,NodeContainer ues,TcpStreamClientHelper clientHelper, TcpStrea
 
 void
 orchestrator (int Id,NodeContainer ues,TcpStreamClientHelper clientHelper, TcpStreamServerHelper serverHelper, NodeContainer macroCells,NodeContainer smallCells)
-{
+{   
+	Simulator::Schedule(Seconds(2),&orchestrator,Id, ues,clientHelper,serverHelper,macroCells,smallCells);
 	Ptr<Node> ue = ues.Get(Id);
 	bool makeSwitch = false;
 	if (clientHelper.GetEnergy(ue)>0 and connectionType[Id]!=3)
@@ -1252,6 +1253,15 @@ main (int argc, char *argv[])
   int seedValue = 0;
   pol=3;
 
+  NodeContainer UeNodes;
+  UeNodes.Create (numberOfUeNodes);
+
+  NodeContainer EnbNodes;
+  EnbNodes.Create (numberOfEnbNodes);
+
+  NodeContainer smallNodes;
+  smallNodes.Create (numberOfSmallNodes);
+
   //lastRx=[numberOfUeNodes];
   //LogComponentEnable("dash-migrationExample", LOG_LEVEL_ALL);
 
@@ -1281,10 +1291,10 @@ main (int argc, char *argv[])
   Config::SetDefault ("ns3::LteEnbRrc::DefaultTransmissionMode", UintegerValue (1));
   //Config::SetDefault ("ns3::RadioEnvironmentMapHelper::Bandwidth", UintegerValue (100));
   Config::SetDefault ("ns3::LteRlcUm::MaxTxBufferSize", UintegerValue(100*1024));
-  //Config::SetDefault ("ns3::LteEnbPhy::TxPower", DoubleValue (46.0));
+  Config::SetDefault ("ns3::LteEnbPhy::TxPower", DoubleValue (46.0));
   //Config::SetDefault ("ns3::LteEnbPhy::NoiseFigure", DoubleValue (5.0));
   //Config::SetDefault ("ns3::LteUePhy::NoiseFigure", DoubleValue (7.0));
-  //Config::SetDefault ("ns3::LteUePhy::TxPower", DoubleValue (24.0));
+  Config::SetDefault ("ns3::LteUePhy::TxPower", DoubleValue (23.0));
 
   Config::SetDefault("ns3::TcpSocket::SegmentSize", UintegerValue (1446));
   Config::SetDefault("ns3::TcpSocket::SndBufSize", UintegerValue (524288));
@@ -1318,6 +1328,7 @@ main (int argc, char *argv[])
   //lteHelper->SetEnbAntennaModelAttribute("Beamwidth", DoubleValue(60));
   //Config::SetDefault("ns3::LteHelper::UseIdealRrc", BooleanValue(false));
 
+  
   // parse again so you can override default values from the command line
   Ptr<Node> pgw = epcHelper->GetPgwNode ();
   
@@ -1484,14 +1495,7 @@ remoteStaticRouting3->AddNetworkRouteTo (Ipv4Address ("7.0.0.0"), Ipv4Mask ("255
 Ptr<Ipv4StaticRouting> remoteStaticRouting4 = ipv4RoutingHelper.GetStaticRouting (remoteHost4->GetObject<Ipv4> ());
 remoteStaticRouting4->AddNetworkRouteTo (Ipv4Address ("7.0.0.0"), Ipv4Mask ("255.0.0.0"), 1);
 /* Create Nodes */
-NodeContainer UeNodes;
-UeNodes.Create (numberOfUeNodes);
 
-NodeContainer EnbNodes;
-EnbNodes.Create (numberOfEnbNodes);
-
-NodeContainer smallNodes;
-smallNodes.Create (numberOfSmallNodes);
 
   std::vector <std::pair <Ptr<Node>, std::string> > clients;
   for (NodeContainer::Iterator i = UeNodes.Begin (); i != UeNodes.End (); ++i)
@@ -1626,11 +1630,19 @@ smallNodes.Create (numberOfSmallNodes);
   //Ns2MobilityHelper ue_mobil = Ns2MobilityHelper("mobil/5961.tcl");
   //MobilityHelper ueMobility;
   //ue_mobil.Install(UeNodes.Begin(), UeNodes.End());
-
-  NetDeviceContainer enbLteDevs = lteHelper->InstallEnbDevice (EnbNodes);
+  lteHelper->SetFfrAlgorithmType("ns3::LteFfrSoftAlgorithm");
+  lteHelper->SetFfrAlgorithmAttribute("FrCellTypeId", UintegerValue (1));
+  NetDeviceContainer enbLteDevs = lteHelper->InstallEnbDevice (EnbNodes.Get(0));
+  lteHelper->SetFfrAlgorithmAttribute("FrCellTypeId", UintegerValue (2));
+  enbLteDevs = lteHelper->InstallEnbDevice (EnbNodes.Get(1));
+  enbLteDevs = lteHelper->InstallEnbDevice (EnbNodes.Get(2));
+  lteHelper->SetFfrAlgorithmAttribute("FrCellTypeId", UintegerValue (1));
+  enbLteDevs = lteHelper->InstallEnbDevice (EnbNodes.Get(3));
+  lteHelper->SetFfrAlgorithmAttribute("FrCellTypeId", UintegerValue (3));
   Config::SetDefault ("ns3::LteEnbPhy::TxPower", DoubleValue (23));
   lteHelper->SetEnbAntennaModelType ("ns3::IsotropicAntennaModel");
   enbLteDevs = lteHelper->InstallEnbDevice (smallNodes);
+  
   NetDeviceContainer ueLteDevs = lteHelper->InstallUeDevice (UeNodes);
 
   // Install the IP stack on the UEs
@@ -1844,6 +1856,7 @@ smallNodes.Create (numberOfSmallNodes);
       double startTime = 2.0;
       clientApps.Get (i)->SetStartTime (Seconds (startTime));
       Simulator::Schedule(Seconds(startTime),&choiceServer,i, UeNodes,clientHelper,serverHelper,EnbNodes,smallNodes);
+      Simulator::Schedule(Seconds(startTime+2),&orchestrator,i, UeNodes,clientHelper,serverHelper,EnbNodes,smallNodes);
     }
   }
   else
@@ -1855,6 +1868,7 @@ smallNodes.Create (numberOfSmallNodes);
         double startTime = 2.0;
         clientApps.Get (i)->SetStartTime (Seconds (startTime));
         Simulator::Schedule(Seconds(startTime),&storage,i, UeNodes,clientHelper,serverHelper,EnbNodes,smallNodes);
+        Simulator::Schedule(Seconds(startTime+2),&orchestrator,i, UeNodes,clientHelper,serverHelper,EnbNodes,smallNodes);
       }
     }
     else
@@ -1866,6 +1880,7 @@ smallNodes.Create (numberOfSmallNodes);
           double startTime = 2.0;
           clientApps.Get (i)->SetStartTime (Seconds (startTime));
           Simulator::Schedule(Seconds(startTime),&greedy,i, UeNodes,clientHelper,serverHelper,EnbNodes,smallNodes);
+          Simulator::Schedule(Seconds(startTime+2),&orchestrator,i, UeNodes,clientHelper,serverHelper,EnbNodes,smallNodes);
         }
       }
       else
@@ -1877,6 +1892,7 @@ smallNodes.Create (numberOfSmallNodes);
             double startTime = 2.0;
             clientApps.Get (i)->SetStartTime (Seconds (startTime));
             Simulator::Schedule(Seconds(startTime),&aleatorio,i, UeNodes,clientHelper,serverHelper,EnbNodes,smallNodes);
+            Simulator::Schedule(Seconds(startTime+2),&orchestrator,i, UeNodes,clientHelper,serverHelper,EnbNodes,smallNodes);
           }
         }
       }

@@ -419,7 +419,11 @@ void
 TcpStreamClient::SegmentReceivedHandle ()
 {
   NS_LOG_FUNCTION (this);
-
+  if(LEM.getEnergy()<=0)
+  {
+    state = terminal;
+    StopApplication();
+  }
   m_bufferData.timeNow.push_back (m_transmissionEndReceivingSegment);
   if (m_segmentCounter > 0)
     { //if a buffer underrun is encountered, the old buffer level will be set to 0, because the buffer can not be negative
@@ -596,7 +600,13 @@ TcpStreamClient::GetBattery()
 {
   double mah = LEM.getEnergy();
   double v = LEM.getVoltage();
+  if(LEM.getEnergy()<=0)
+  {
+    state = terminal;
+    StopApplication();
+  }
   LogBattery (v,mah);
+
   std::cout << "At " << Simulator::Now ().GetSeconds () << " Cell voltage: " << v << " V Remaining Capacity: " << mah << " mAh " <<std::endl;
 }
 
