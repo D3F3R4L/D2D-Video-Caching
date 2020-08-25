@@ -1253,14 +1253,6 @@ main (int argc, char *argv[])
   int seedValue = 0;
   pol=3;
 
-  NodeContainer UeNodes;
-  UeNodes.Create (numberOfUeNodes);
-
-  NodeContainer EnbNodes;
-  EnbNodes.Create (numberOfEnbNodes);
-
-  NodeContainer smallNodes;
-  smallNodes.Create (numberOfSmallNodes);
 
   //lastRx=[numberOfUeNodes];
   //LogComponentEnable("dash-migrationExample", LOG_LEVEL_ALL);
@@ -1495,6 +1487,15 @@ remoteStaticRouting3->AddNetworkRouteTo (Ipv4Address ("7.0.0.0"), Ipv4Mask ("255
 Ptr<Ipv4StaticRouting> remoteStaticRouting4 = ipv4RoutingHelper.GetStaticRouting (remoteHost4->GetObject<Ipv4> ());
 remoteStaticRouting4->AddNetworkRouteTo (Ipv4Address ("7.0.0.0"), Ipv4Mask ("255.0.0.0"), 1);
 /* Create Nodes */
+
+  NodeContainer UeNodes;
+  UeNodes.Create (numberOfUeNodes);
+
+  NodeContainer EnbNodes;
+  EnbNodes.Create (numberOfEnbNodes);
+
+  NodeContainer smallNodes;
+  smallNodes.Create (numberOfSmallNodes);
 
 
   std::vector <std::pair <Ptr<Node>, std::string> > clients;
