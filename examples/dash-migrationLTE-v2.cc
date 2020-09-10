@@ -769,7 +769,7 @@ choiceServer (int Id,NodeContainer ues,TcpStreamClientHelper clientHelper, TcpSt
       double Cap = clientHelper.GetStorage(ue);
       if (Energy>0 and Cap>tam)
       {
-        if (Energy>bestEnergy and Cap>bestCap)
+        if (Energy>bestEnergy and Cap>bestCap or Energy>bestEnergy)
         {
           bestEnergy=Energy;
           bestCap=Cap;

@@ -83,7 +83,7 @@ TcpStreamServer::GetTypeId (void)
                    MakeUintegerChecker<uint32_t> ())
     .AddAttribute ("Storage",
                    "storage in Mb of server",
-                   DoubleValue (10000),
+                   DoubleValue (30000),
                    MakeDoubleAccessor (&TcpStreamServer::storage),
                    MakeDoubleChecker<double> ())
   ;

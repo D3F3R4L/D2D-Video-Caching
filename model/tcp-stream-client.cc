@@ -68,11 +68,11 @@ TcpStreamClient::Controller (controllerEvent event)
   NS_LOG_UNCOND(m_currentPlaybackIndex);
   if (state == initial)
     { 
-      if (handover)
-      {
-        HandoverApplication(newip);
-        handover=false;
-      }
+      //if (handover)
+      //{
+      //  HandoverApplication(newip);
+      //  handover=false;
+      //}
       NS_LOG_UNCOND(m_segmentCounter); NS_LOG_UNCOND(m_peerAddress);
       RequestRepIndex ();
       state = downloading;
@@ -82,11 +82,11 @@ TcpStreamClient::Controller (controllerEvent event)
 
   if (state == downloading)
     {
-      if (handover)
-      {
-        HandoverApplication(newip);
-        handover=false;
-      }
+      //if (handover)
+      //{
+      //  HandoverApplication(newip);
+      //  handover=false;
+      //}
 
       PlaybackHandle ();
       if (m_currentPlaybackIndex <= m_lastSegmentIndex)
@@ -113,11 +113,11 @@ TcpStreamClient::Controller (controllerEvent event)
     {
       if (event == downloadFinished)
         { 
-          if (handover)
-            {
-              HandoverApplication(newip);
-              handover=false;
-            }
+          //if (handover)
+          //  {
+          //    HandoverApplication(newip);
+          //    handover=false;
+          //  }
           if (m_segmentCounter < m_lastSegmentIndex)
             { 
               m_segmentCounter++; NS_LOG_UNCOND(m_segmentCounter);
@@ -620,8 +620,9 @@ TcpStreamClient::GetServerAddress()
 void
 TcpStreamClient::SetHandover(Address ip)
 {
-  handover=true;
+  //handover=true;
   newip=ip;
+  HandoverApplication (newip);
 }
 
 std::string
