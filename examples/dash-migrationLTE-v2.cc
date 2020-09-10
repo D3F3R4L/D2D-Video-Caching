@@ -41,6 +41,7 @@
 #include "ns3/li-ion-energy-source-helper.h"
 #include "ns3/ipv4-global-routing-helper.h"
 #include "ns3/point-to-point-helper.h"
+#include "ns3/random-walk-2d-mobility-model.h"
 #include <random>
 
 template <typename T>
@@ -1576,6 +1577,12 @@ remoteStaticRouting4->AddNetworkRouteTo (Ipv4Address ("7.0.0.0"), Ipv4Mask ("255
       clientPosLog << ToString(pos.x) << ", " << ToString(pos.y) << ", " << ToString(pos.z) << "\n";
       clientPosLog.flush ();
     }*/
+
+  Config::SetDefault ("ns3::RandomWalk2dMobilityModel::Mode", StringValue ("Time"));
+  Config::SetDefault ("ns3::RandomWalk2dMobilityModel::Time", StringValue ("2s"));
+  Config::SetDefault ("ns3::RandomWalk2dMobilityModel::Speed", StringValue ("ns3::ConstantRandomVariable[Constant=1.0]"));
+  Config::SetDefault ("ns3::RandomWalk2dMobilityModel::Bounds", StringValue ("-800|800|-800|800"));
+
   Ptr<RandomBoxPositionAllocator> randPosAlloc = CreateObject<RandomBoxPositionAllocator> ();
   randPosAlloc->AssignStreams (simulationId);
   Ptr<UniformRandomVariable> xVal = CreateObject<UniformRandomVariable> ();
@@ -1623,10 +1630,13 @@ remoteStaticRouting4->AddNetworkRouteTo (Ipv4Address ("7.0.0.0"), Ipv4Mask ("255
     clientPosLog.flush ();
   }
   MobilityHelper mobilityUe;
-  mobilityUe.SetMobilityModel("ns3::ConstantPositionMobilityModel");
   mobilityUe.SetPositionAllocator(UePosition);
+  mobilityUe.SetMobilityModel ("ns3::RandomWalk2dMobilityModel",
+                              "Mode", StringValue ("Time"),
+                              "Time", StringValue ("2s"),
+                              "Speed", StringValue ("ns3::ConstantRandomVariable[Constant=1.0]"),
+                              "Bounds", StringValue ("-1000|1000|-1000|1000"));
   mobilityUe.Install(UeNodes);
-
     // User Devices mobility
   //Ns2MobilityHelper ue_mobil = Ns2MobilityHelper("mobil/5961.tcl");
   //MobilityHelper ueMobility;
