@@ -1929,7 +1929,7 @@ remoteStaticRouting4->AddNetworkRouteTo (Ipv4Address ("7.0.0.0"), Ipv4Mask ("255
   Simulator::Schedule(Seconds(3),&getStall,clientApps,clientHelper,clients);
   Simulator::Schedule(Seconds(10),&getStartTime,clientApps,clientHelper,clients);
   //Simulator::Schedule(Seconds(1),&throughput,flowMonitor,classifier);
-  Simulator::Stop(Seconds(180));
+  Simulator::Stop(Seconds(1800));
   Simulator::Run ();
   //flowMonitor->SerializeToXmlFile ("results.xml" , true, true );
   Simulator::Destroy ();
