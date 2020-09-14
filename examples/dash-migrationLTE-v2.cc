@@ -1249,7 +1249,7 @@ main (int argc, char *argv[])
   uint16_t numberOfSmallNodes = 9;
   uint32_t numberOfServers = 4;
   std::string adaptationAlgo = "esba";
-  std::string segmentSizeFilePath = "src/esba-dash-energy/dash/segmentSizesBigBuck90.txt";
+  std::string segmentSizeFilePath = "src/esba-dash-energy/dash/segmentSizesBigBuck10.txt";
   //bool shortGuardInterval = true;
   int seedValue = 0;
   pol=3;
@@ -1929,7 +1929,7 @@ remoteStaticRouting4->AddNetworkRouteTo (Ipv4Address ("7.0.0.0"), Ipv4Mask ("255
   Simulator::Schedule(Seconds(3),&getStall,clientApps,clientHelper,clients);
   Simulator::Schedule(Seconds(10),&getStartTime,clientApps,clientHelper,clients);
   //Simulator::Schedule(Seconds(1),&throughput,flowMonitor,classifier);
-  Simulator::Stop(Seconds(1800));
+  Simulator::Stop(Seconds(300));
   Simulator::Run ();
   //flowMonitor->SerializeToXmlFile ("results.xml" , true, true );
   Simulator::Destroy ();
