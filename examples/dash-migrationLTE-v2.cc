@@ -973,20 +973,16 @@ greedy (int Id,NodeContainer ues,TcpStreamClientHelper clientHelper, TcpStreamSe
     for (uint i = 0; i < devices.size(); i++)
     {
       Ptr<Node>ue = ues.Get(devices[i]);
-      double Energy = clientHelper.GetEnergy(ue);
       double Cap = clientHelper.GetStorage(ue);
       Ptr<MobilityModel> pmob = ue->GetObject<MobilityModel>();
       double px = pmob->GetPosition().x;
       double py = pmob->GetPosition().y;
       double dist = sqrt(pow((px-x),2)+pow((py-y),2));
-      if (Energy>0 and Cap>tam)
+      if (dist<bestueDist)
       {
-        if (dist<bestueDist)
-        {
-          bestue=ue;
-          bestueDist=dist;
-          bestueCap=Cap;
-        }
+        bestue=ue;
+        bestueDist=dist;
+        bestueCap=Cap;
       }
     }
   }
@@ -1000,15 +996,12 @@ greedy (int Id,NodeContainer ues,TcpStreamClientHelper clientHelper, TcpStreamSe
       Ptr<MobilityModel> pmob = cell->GetObject<MobilityModel>();
       double px = pmob->GetPosition().x;
       double py = pmob->GetPosition().y;
-      double dist = sqrt(pow((px-x),2)+pow((py-y),2));
-      if (Cap>tam)
+      double dist = sqrt(pow((px-x),2)+pow((py-y),2));   
+      if (dist<bestsmallDist)
       {
-        if (dist<bestsmallDist)
-        {
-          bestsmallDist=dist;
-          bestsmall=cell;
-          bestsmallCap=Cap;
-        }
+        bestsmallDist=dist;
+        bestsmall=cell;
+        bestsmallCap=Cap;
       }
     }
   }
@@ -1023,40 +1016,49 @@ greedy (int Id,NodeContainer ues,TcpStreamClientHelper clientHelper, TcpStreamSe
       double px = pmob->GetPosition().x;
       double py = pmob->GetPosition().y;
       double dist = sqrt(pow((px-x),2)+pow((py-y),2));
-      if (Cap>tam)
+      if (dist<bestmacroDist)
       {
-        if (dist<bestmacroDist)
-        {
-          bestmacroDist=dist;
-          bestmacro=cell;
-          bestmacroCap=Cap;
-        }
+        bestmacroDist=dist;
+        bestmacro=cell;
+        bestmacroCap=Cap;
       }
     }
   }
   if (bestueDist<bestsmallDist and bestueDist<bestmacroDist)
-  {NS_LOG_UNCOND("D2D");
-    clientHelper.SetStorage(bestue,bestueCap-tam);
-    ServerHandover(clientHelper,client,d2dAddress);
-    conections[Id]=bestue;
-    connectionType[Id]=0;
-    return ;
+  {	
+  	if (bestueCap>tam)
+  	{
+  		NS_LOG_UNCOND("D2D");
+    	clientHelper.SetStorage(bestue,bestueCap-tam);
+    	ServerHandover(clientHelper,client,d2dAddress);
+    	conections[Id]=bestue;
+    	connectionType[Id]=0;
+    	return ;
+    }
   }
   if (bestsmallDist<bestueDist and bestsmallDist<bestmacroDist)
-  { NS_LOG_UNCOND("Small Cell");
-    serverHelper.SetStorage(sv.Get(1),bestsmallCap-tam);
-    ServerHandover(clientHelper,client,SmallCellAddress);
-    conections[Id]=bestsmall;
-    connectionType[Id]=1;
-    return;
+  { 
+  	if(bestsmallCap>tam)
+  	{
+  		NS_LOG_UNCOND("Small Cell");
+    	serverHelper.SetStorage(sv.Get(1),bestsmallCap-tam);
+    	ServerHandover(clientHelper,client,SmallCellAddress);
+    	conections[Id]=bestsmall;
+    	connectionType[Id]=1;
+    	return;
+    }
   }
   if (bestmacroDist<bestueDist and bestmacroDist<bestsmallDist)
-  {NS_LOG_UNCOND("Macro Cell");
-    serverHelper.SetStorage(sv.Get(2),bestmacroCap-tam);
-    ServerHandover(clientHelper,client,MacroCellAddress);
-    conections[Id]=bestmacro;
-    connectionType[Id]=2;
-    return;
+  {	
+  	if (bestmacroCap>tam)
+  	{
+  		NS_LOG_UNCOND("Macro Cell");
+    	serverHelper.SetStorage(sv.Get(2),bestmacroCap-tam);
+    	ServerHandover(clientHelper,client,MacroCellAddress);
+    	conections[Id]=bestmacro;
+    	connectionType[Id]=2;
+    	return;
+    }
   }
   NS_LOG_UNCOND("Cloud");
   connectionType[Id]=3;
