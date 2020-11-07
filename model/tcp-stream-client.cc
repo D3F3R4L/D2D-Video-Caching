@@ -309,11 +309,9 @@ TcpStreamClient::Initialise (std::string algorithm, uint16_t clientId,Ptr<Node> 
       Simulator::Stop ();
       Simulator::Destroy ();
     }
-  NS_LOG_UNCOND("313");
   algo->SetNode(node);
   m_algoName = algorithm;
   InitializeLogFiles (ToString (m_simulationId), ToString (m_clientId), ToString (m_numberOfClients), ToString (serverId), ToString (polId));
-  NS_LOG_UNCOND("316");
 }
 
 TcpStreamClient::~TcpStreamClient ()

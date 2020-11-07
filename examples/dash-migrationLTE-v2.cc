@@ -1260,9 +1260,9 @@ main (int argc, char *argv[])
   uint64_t segmentDuration = 2000000;
   // The simulation id is used to distinguish log file results from potentially multiple consequent simulation runs.
   simulationId = 0;
-  numberOfUeNodes = 150;
-  numberOfEnbNodes = 4;
-  uint16_t numberOfSmallNodes = 9;
+  numberOfUeNodes = 11;
+  numberOfEnbNodes = 1;
+  uint16_t numberOfSmallNodes = 4;
   uint32_t numberOfServers = 4;
   std::string adaptationAlgo = "esba";
   std::string segmentSizeFilePath = "src/esba-dash-energy/dash/segmentSizesBigBuck10.txt";
@@ -1298,7 +1298,7 @@ main (int argc, char *argv[])
   Config::SetDefault ("ns3::LteEnbNetDevice::UlBandwidth", UintegerValue (100));
   
   Config::SetDefault ("ns3::LteEnbRrc::DefaultTransmissionMode", UintegerValue (1));
-  Config::SetDefault ("ns3::LteEnbRrc::SrsPeriodicity", UintegerValue (80));
+  Config::SetDefault ("ns3::LteEnbRrc::SrsPeriodicity", UintegerValue (160));
   //Config::SetDefault ("ns3::RadioEnvironmentMapHelper::Bandwidth", UintegerValue (100));
   Config::SetDefault ("ns3::LteRlcUm::MaxTxBufferSize", UintegerValue(100*1024));
   Config::SetDefault ("ns3::LteEnbPhy::TxPower", DoubleValue (46.0));
@@ -1598,17 +1598,17 @@ remoteStaticRouting4->AddNetworkRouteTo (Ipv4Address ("7.0.0.0"), Ipv4Mask ("255
   Config::SetDefault ("ns3::RandomWalk2dMobilityModel::Mode", StringValue ("Time"));
   Config::SetDefault ("ns3::RandomWalk2dMobilityModel::Time", StringValue ("2s"));
   Config::SetDefault ("ns3::RandomWalk2dMobilityModel::Speed", StringValue ("ns3::ConstantRandomVariable[Constant=1.0]"));
-  Config::SetDefault ("ns3::RandomWalk2dMobilityModel::Bounds", StringValue ("-800|800|-800|800"));
+  Config::SetDefault ("ns3::RandomWalk2dMobilityModel::Bounds", StringValue ("-400|400|-400|400"));
 
   Ptr<RandomBoxPositionAllocator> randPosAlloc = CreateObject<RandomBoxPositionAllocator> ();
   randPosAlloc->AssignStreams (simulationId);
   Ptr<UniformRandomVariable> xVal = CreateObject<UniformRandomVariable> ();
-  xVal->SetAttribute ("Min", DoubleValue (-1000));
-  xVal->SetAttribute ("Max", DoubleValue (1000));
+  xVal->SetAttribute ("Min", DoubleValue (-500));
+  xVal->SetAttribute ("Max", DoubleValue (500));
   randPosAlloc->SetAttribute ("X", PointerValue (xVal));
   Ptr<UniformRandomVariable> yVal = CreateObject<UniformRandomVariable> ();
-  yVal->SetAttribute ("Min", DoubleValue (-1000));
-  yVal->SetAttribute ("Max", DoubleValue (1000));
+  yVal->SetAttribute ("Min", DoubleValue (-500));
+  yVal->SetAttribute ("Max", DoubleValue (500));
   randPosAlloc->SetAttribute ("Y", PointerValue (yVal));
   Ptr<UniformRandomVariable> zVal = CreateObject<UniformRandomVariable> ();
   zVal->SetAttribute ("Min", DoubleValue (0));
@@ -1616,7 +1616,7 @@ remoteStaticRouting4->AddNetworkRouteTo (Ipv4Address ("7.0.0.0"), Ipv4Mask ("255
   randPosAlloc->SetAttribute ("Z", PointerValue (zVal));
 
   Ptr < ListPositionAllocator > HpnPosition = CreateObject < ListPositionAllocator > ();
-  ArrayPositionAllocator(HpnPosition,"CellsDataset");
+  ArrayPositionAllocator(HpnPosition,"CellsDatasetS");
 
   MobilityHelper mobility;
   mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
@@ -1624,7 +1624,7 @@ remoteStaticRouting4->AddNetworkRouteTo (Ipv4Address ("7.0.0.0"), Ipv4Mask ("255
   mobility.Install(EnbNodes);
 
   Ptr < ListPositionAllocator > SmallPosition = CreateObject < ListPositionAllocator > ();
-  ArrayPositionAllocator(SmallPosition,"SmallDataset");
+  ArrayPositionAllocator(SmallPosition,"SmallDatasetS");
   MobilityHelper mobilitySmall;
   mobilitySmall.SetMobilityModel("ns3::ConstantPositionMobilityModel");
   mobilitySmall.SetPositionAllocator(SmallPosition);
@@ -1651,7 +1651,7 @@ remoteStaticRouting4->AddNetworkRouteTo (Ipv4Address ("7.0.0.0"), Ipv4Mask ("255
                               "Mode", StringValue ("Time"),
                               "Time", StringValue ("2s"),
                               "Speed", StringValue ("ns3::ConstantRandomVariable[Constant=1.0]"),
-                              "Bounds", StringValue ("-1000|1000|-1000|1000"));
+                              "Bounds", StringValue ("-500|500|-500|500"));
   mobilityUe.Install(UeNodes);
     // User Devices mobility
   //Ns2MobilityHelper ue_mobil = Ns2MobilityHelper("mobil/5961.tcl");
@@ -1660,12 +1660,12 @@ remoteStaticRouting4->AddNetworkRouteTo (Ipv4Address ("7.0.0.0"), Ipv4Mask ("255
   lteHelper->SetFfrAlgorithmType("ns3::LteFfrSoftAlgorithm");
   lteHelper->SetFfrAlgorithmAttribute("FrCellTypeId", UintegerValue (1));
   NetDeviceContainer enbLteDevs = lteHelper->InstallEnbDevice (EnbNodes.Get(0));
-  lteHelper->SetFfrAlgorithmAttribute("FrCellTypeId", UintegerValue (2));
-  enbLteDevs = lteHelper->InstallEnbDevice (EnbNodes.Get(1));
-  enbLteDevs = lteHelper->InstallEnbDevice (EnbNodes.Get(2));
-  lteHelper->SetFfrAlgorithmAttribute("FrCellTypeId", UintegerValue (1));
-  enbLteDevs = lteHelper->InstallEnbDevice (EnbNodes.Get(3));
-  lteHelper->SetFfrAlgorithmAttribute("FrCellTypeId", UintegerValue (3));
+  //lteHelper->SetFfrAlgorithmAttribute("FrCellTypeId", UintegerValue (2));
+  //enbLteDevs = lteHelper->InstallEnbDevice (EnbNodes.Get(1));
+  //enbLteDevs = lteHelper->InstallEnbDevice (EnbNodes.Get(2));
+  //lteHelper->SetFfrAlgorithmAttribute("FrCellTypeId", UintegerValue (1));
+  //enbLteDevs = lteHelper->InstallEnbDevice (EnbNodes.Get(3));
+  //lteHelper->SetFfrAlgorithmAttribute("FrCellTypeId", UintegerValue (3));
   Config::SetDefault ("ns3::LteEnbPhy::TxPower", DoubleValue (23));
   lteHelper->SetEnbAntennaModelType ("ns3::IsotropicAntennaModel");
   enbLteDevs = lteHelper->InstallEnbDevice (smallNodes);
@@ -1779,7 +1779,7 @@ remoteStaticRouting4->AddNetworkRouteTo (Ipv4Address ("7.0.0.0"), Ipv4Mask ("255
   clientHelper.SetAttribute ("SimulationId", UintegerValue (simulationId));
   clientHelper.SetAttribute ("ServerId", UintegerValue (2));
   clientApps.Add(clientHelper.Install (clients_temp2));
-  NS_LOG_UNCOND("1781");
+  
   clientHelper.SetAttribute ("RemoteAddress", AddressValue (cloudAddress));
   clientHelper.SetAttribute ("RemotePort", UintegerValue (port));
   clientHelper.SetAttribute ("SegmentDuration", UintegerValue (segmentDuration));
@@ -1788,7 +1788,6 @@ remoteStaticRouting4->AddNetworkRouteTo (Ipv4Address ("7.0.0.0"), Ipv4Mask ("255
   clientHelper.SetAttribute ("SimulationId", UintegerValue (simulationId));
   clientHelper.SetAttribute ("ServerId", UintegerValue (3));
   clientApps.Add(clientHelper.Install (clients));
-  NS_LOG_UNCOND("1792");
   
   //for (uint i = 0; i < clientApps.GetN (); i++)
   //  {
