@@ -299,7 +299,7 @@ TcpStreamClient::Initialise (std::string algorithm, uint16_t clientId,Ptr<Node> 
       algo = new FestiveAlgorithm (m_videoData, m_playbackData, m_bufferData, m_throughput);
     }
   else if (algorithm == "esba")
-    {
+    {NS_LOG_UNCOND("303");
       algo = new ESBAAlgorithm (m_videoData, m_playbackData, m_bufferData, m_throughput);
     }
   else
@@ -309,10 +309,11 @@ TcpStreamClient::Initialise (std::string algorithm, uint16_t clientId,Ptr<Node> 
       Simulator::Stop ();
       Simulator::Destroy ();
     }
+  NS_LOG_UNCOND("313");
   algo->SetNode(node);
   m_algoName = algorithm;
   InitializeLogFiles (ToString (m_simulationId), ToString (m_clientId), ToString (m_numberOfClients), ToString (serverId), ToString (polId));
-
+  NS_LOG_UNCOND("316");
 }
 
 TcpStreamClient::~TcpStreamClient ()
@@ -827,7 +828,8 @@ TcpStreamClient::LogBattery (double voltage, double mah)
   NS_LOG_FUNCTION (this);
   batteryLog << std::setfill (' ') << std::setw (0) << Simulator::Now ().GetMicroSeconds ()  / (double)1000000 << ";"
              << std::setfill (' ') << std::setw (0) << voltage << ";"
-             << std::setfill (' ') << std::setw (0) << mah << ";\n";
+             << std::setfill (' ') << std::setw (0) << mah << ";"
+             << std::setfill (' ') << std::setw (0) << storage << ";\n";
   batteryLog.flush ();
 }
 
@@ -868,7 +870,7 @@ TcpStreamClient::InitializeLogFiles (std::string simulationId, std::string clien
 
   std::string baLog = dashLogDirectory + m_algoName + "/" +  numberOfClients + "/" + pol + "/sim" + simulationId + "_" + "cl" + clientId + "_" + "server" + serverId + "_" + "batteryLog.csv";
   batteryLog.open (baLog.c_str ());
-  batteryLog << ("Time_Now;Cell_Voltage;Remaining_Capacity_mAh\n");
+  batteryLog << ("Time_Now;Cell_Voltage;Remaining_Capacity_mAh;Remaining_Storage\n");
   batteryLog.flush ();
 }
 

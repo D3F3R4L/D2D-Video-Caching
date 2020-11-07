@@ -182,6 +182,16 @@ LogStartTime (double sv1,double sv2,double sv3,double cloud)
               << std::setfill (' ') << std::setw (0) << StartMMECloud << ";\n";
   StartTimeLog.flush ();
 }
+
+void
+Log (double mah,double choice, int id, std::string alloc)
+{
+  ServerScoreLog << std::setfill (' ') << std::setw (0) << id << ";"
+              << std::setfill (' ') << std::setw (0) << mah << ";"
+               << std::setfill (' ') << std::setw (0) << choice << ";"
+              << std::setfill (' ') << std::setw (0) << alloc << ";\n";
+  ServerScoreLog.flush ();
+}
 /*
 void 
 throughput(Ptr<FlowMonitor> flowMonitor,Ptr<Ipv4FlowClassifier> classifier)
@@ -304,9 +314,9 @@ InitializeLogFiles (std::string dashLogDirectory, std::string m_algoName,std::st
   StartTimeLog << "SV1_PlaybackStartTime;SV1_PlaybackStartTime_MME;SV2_PlaybackStartTime;SV2_PlaybackStartTime_MME;SV3_PlaybackStartTime;SV3_PlaybackStartTime_MME;Cloud_PlaybackStartTime;Cloud_PlaybackStartTime_MME\n";
   StartTimeLog.flush ();
 
-  std::string SsLog = dashLogDirectory + m_algoName + "/" +  numberOfUeNodes + "/" + pol + "/sim" + simulationId + "_" + "ServerScores.csv";
+  std::string SsLog = dashLogDirectory + m_algoName + "/" +  numberOfUeNodes + "/" + pol + "/sim" + simulationId + "_" + "Users.csv";
   ServerScoreLog.open (SsLog.c_str ());
-  ServerScoreLog << "SV1_Score;SV2_Score;SV3_Score;Cloud_Score;\n";
+  ServerScoreLog << "Id;Energy(mah);VideoSize(mb);Allocation;\n";
   ServerScoreLog.flush ();
 
 }
@@ -782,6 +792,7 @@ choiceServer (int Id,NodeContainer ues,TcpStreamClientHelper clientHelper, TcpSt
       clientHelper.SetStorage(bestue,bestCap-tam);
       conections[Id]=bestue;
       connectionType[Id]=0;
+      Log(clientHelper.GetEnergy(client),tam,Id,"D2D");
       ServerHandover(clientHelper,client,d2dAddress);
       return ;
     }
@@ -809,6 +820,7 @@ choiceServer (int Id,NodeContainer ues,TcpStreamClientHelper clientHelper, TcpSt
       serverHelper.SetStorage(sv.Get(1),bestCap-tam);
       conections[Id]=bestsmall;
       connectionType[Id]=1;
+      Log(clientHelper.GetEnergy(client),tam,Id,"Small_Cell");
       ServerHandover(clientHelper,client,SmallCellAddress);
       return;
     }
@@ -836,10 +848,12 @@ choiceServer (int Id,NodeContainer ues,TcpStreamClientHelper clientHelper, TcpSt
       serverHelper.SetStorage(sv.Get(2),bestCap-tam);
       conections[Id]=bestmacro;
       connectionType[Id]=2;
+      Log(clientHelper.GetEnergy(client),tam,Id,"Macro_Cell");
       ServerHandover(clientHelper,client,MacroCellAddress);
       return;
     }
   }
+  Log(clientHelper.GetEnergy(client),tam,Id,"Cloud");
   NS_LOG_UNCOND("Cloud");
   connectionType[Id]=3;
 }
@@ -1246,7 +1260,7 @@ main (int argc, char *argv[])
   uint64_t segmentDuration = 2000000;
   // The simulation id is used to distinguish log file results from potentially multiple consequent simulation runs.
   simulationId = 0;
-  numberOfUeNodes = 11;
+  numberOfUeNodes = 150;
   numberOfEnbNodes = 4;
   uint16_t numberOfSmallNodes = 9;
   uint32_t numberOfServers = 4;
@@ -1284,6 +1298,7 @@ main (int argc, char *argv[])
   Config::SetDefault ("ns3::LteEnbNetDevice::UlBandwidth", UintegerValue (100));
   
   Config::SetDefault ("ns3::LteEnbRrc::DefaultTransmissionMode", UintegerValue (1));
+  Config::SetDefault ("ns3::LteEnbRrc::SrsPeriodicity", UintegerValue (80));
   //Config::SetDefault ("ns3::RadioEnvironmentMapHelper::Bandwidth", UintegerValue (100));
   Config::SetDefault ("ns3::LteRlcUm::MaxTxBufferSize", UintegerValue(100*1024));
   Config::SetDefault ("ns3::LteEnbPhy::TxPower", DoubleValue (46.0));
@@ -1600,7 +1615,6 @@ remoteStaticRouting4->AddNetworkRouteTo (Ipv4Address ("7.0.0.0"), Ipv4Mask ("255
   zVal->SetAttribute ("Max", DoubleValue (1.5));
   randPosAlloc->SetAttribute ("Z", PointerValue (zVal));
 
-
   Ptr < ListPositionAllocator > HpnPosition = CreateObject < ListPositionAllocator > ();
   ArrayPositionAllocator(HpnPosition,"CellsDataset");
 
@@ -1693,7 +1707,6 @@ remoteStaticRouting4->AddNetworkRouteTo (Ipv4Address ("7.0.0.0"), Ipv4Mask ("255
   Config::Connect ("/NodeList/*/ApplicationList/*/$ns3::V4Ping/Rtt",MakeCallback (&PingRtt));
 
   //Packet::EnablePrinting ();
-
   NodeContainer servers;
   servers.Add(remoteHost);
   servers.Add(remoteHost2);
@@ -1766,7 +1779,7 @@ remoteStaticRouting4->AddNetworkRouteTo (Ipv4Address ("7.0.0.0"), Ipv4Mask ("255
   clientHelper.SetAttribute ("SimulationId", UintegerValue (simulationId));
   clientHelper.SetAttribute ("ServerId", UintegerValue (2));
   clientApps.Add(clientHelper.Install (clients_temp2));
-
+  NS_LOG_UNCOND("1781");
   clientHelper.SetAttribute ("RemoteAddress", AddressValue (cloudAddress));
   clientHelper.SetAttribute ("RemotePort", UintegerValue (port));
   clientHelper.SetAttribute ("SegmentDuration", UintegerValue (segmentDuration));
@@ -1775,6 +1788,7 @@ remoteStaticRouting4->AddNetworkRouteTo (Ipv4Address ("7.0.0.0"), Ipv4Mask ("255
   clientHelper.SetAttribute ("SimulationId", UintegerValue (simulationId));
   clientHelper.SetAttribute ("ServerId", UintegerValue (3));
   clientApps.Add(clientHelper.Install (clients));
+  NS_LOG_UNCOND("1792");
   
   //for (uint i = 0; i < clientApps.GetN (); i++)
   //  {
